@@ -202,7 +202,7 @@ for l in range(np.shape(data_flux)[2]):
         if np.max(predict) > float(quality):
             fig = plt.figure(constrained_layout = False, figsize=(15, 7))
             gs = fig.add_gridspec(3, 3)
-            gs.update(wspace = 0.1, hspace = 0.4)
+            gs.update(wspace = 0.3, hspace = 0.4)
             ax1 = fig.add_subplot(gs[0, 0])
             ax2 = fig.add_subplot(gs[0, 1:])
             ax3 = fig.add_subplot(gs[1:, 0], projection = wcs)
