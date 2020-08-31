@@ -40,9 +40,10 @@ Finished pixels:  ███████████████████∙�
 Change the target and size of the cut to test it on any target. Note: Each TESS pixel is about 21 arcsec wide.
 
 
-## Authors
+## Contributers
 
 * **Te Han** 
+* **Timothy D Brandt** 
 
 ## License
  ...
