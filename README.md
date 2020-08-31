@@ -2,7 +2,7 @@
 Using the TESS 30-min interval full frame images, this code searches for eclipsing binaries with convolutional neural network (CNN). 
 
 <!--  -->
-![0 991 0000  15,12](https://user-images.githubusercontent.com/49893001/91675214-6b366900-eaf0-11ea-95d2-8bb495d4a47f.png)
+![[FSR2007] 0728 [15,12]](https://user-images.githubusercontent.com/49893001/91675214-6b366900-eaf0-11ea-95d2-8bb495d4a47f.png)
 
 ## Getting Started
 
