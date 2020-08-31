@@ -37,7 +37,7 @@ Threshold [Default: 0.95]: 0.99
 Saving figures to [Default: root]:
 Finished pixels:  ███████████████████∙∙∙∙∙∙∙∙∙∙∙∙∙ 60.0% Elapsed: 1514s Remaining: 1003s
 ```
-Change the target and size of the cut to test it on any target. 
+Change the target and size of the cut to test it on any target. Note: Each TESS pixel is about 21 arcsec wide.
 
 
 ## Authors
