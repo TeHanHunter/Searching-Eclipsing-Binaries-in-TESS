@@ -6,7 +6,7 @@ Using the TESS 30-min interval full frame images, this code searches for eclipsi
 
 ## Getting Started
 
-This python script can be used to search for EBs in a cluster or any region of the sky covered by TESS. It returns a graph and .dat document for each pixel that includes information of this CNN prediction
+This python script can be used to search for EBs in a cluster or any region of the sky covered by TESS. It returns a graph and .dat document for each pixel, which include information about the CNN prediction on the light curve of the pixel. 
 
 ### Prerequisites
 
@@ -16,7 +16,7 @@ pickle, tensorflow, sklearn, astroquery
 ```
 
 ### Installing
-Clone the master folder and run Searching_EB-Command_line.py on a command line. Locate tess_cnn.h5 file in CNN Training folder and you can start using it!
+After installing required packages, clone the master folder and run Searching_EB-Command_line.py on a command line. Locate tess_cnn.h5 file in CNN Training folder and you can start using it!
 
 ## Running the Search
 The script askes for several parameters and saves figures and data that are selected by these parameters. The time taken for each pixel is roughly 6 seconds. Below is an example for the open cluster [FSR2007] 0728, which returns the figure shown above. This is a 400 pixel cut, and it took approximately 40 minutes in a test run. 
