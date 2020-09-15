@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import matplotlib.gridspec as gridspec
 
+from wotan import flatten
 from astropy.wcs import WCS
 from astropy.io import fits
 from astropy.io import ascii
@@ -141,6 +142,13 @@ quality = input('Threshold [Default: 0.95]: ') or '0.95'
 location = input('Saving figures to [Default: root]: ')
 mylist = np.arange(size ** 2)
 bar = ChargingBar('Finished pixels: ', max = len(mylist), suffix = '%(percent).1f%% Elapsed: %(elapsed)ds Remaining: %(eta)ds')
+file = open(location + target_name + '.txt', 'w') 
+file.write('Target Identifier:' + target_name + '\n' +
+           'FOV in arcmin (max 33) [Default: 5]:' + FOV + '\n' +
+           'Trained cnn .h5 file [Default: tess_cnn.h5]:' + cnn_weights + '\n' +
+           'Threshold [Default: 0.95]:' + quality + '\n' +
+           'Saving figures to [Default: root]:' + location)
+file.close() 
 
 for l in range(np.shape(data_flux)[2]):
     for i in range(np.shape(data_flux)[1]):
@@ -151,8 +159,8 @@ for l in range(np.shape(data_flux)[2]):
         distance_from_mean = abs(flux_raw - mean)
         max_deviations = 3
         not_outlier = distance_from_mean < max_deviations * standard_deviation
-        flux_1d = flux_raw[not_outlier]
-            
+        flux_1d = flatten(data_time[not_outlier], flux_raw[not_outlier], break_tolerance = 1 , window_length = 1, return_trend = False)
+        
         #make CNN tests
         a_0 = 0.1
         r = 1.05
@@ -214,9 +222,9 @@ for l in range(np.shape(data_flux)[2]):
             ax1.text(0.1,0.3,'Period: %.8f' % period_[idx[0][0]], fontsize=10)
             #ax1.text(0.1,0.1,'Other bests: ' + str(0.5 * len(idx) - 1), fontsize=10)
             ax1.text(0.1,0.1,'RA, Dec: ' + str(wcs.all_pix2world([[l,i]],0)), fontsize=10)
-            ax2.plot(data_time, flux_raw, color = 'silver')
+            #ax2.plot(data_time, flux_raw, color = 'silver')
             ax2.set_title(target_name + ' x = ' + str(l ) + ', y = ' + str(i ), fontsize = 15)
-            ax2.set_ylabel('Normalized Flux')
+            ax2.set_ylabel('Detrended Flux')
             ax2.set_xlabel('Time (TBJD)')
             ax2.plot(data_time[not_outlier], flux_1d, ms = 2, marker = '.', c = 'C1', linestyle = '')
             ax3.imshow(firstImage, origin = 'lower', cmap = plt.cm.YlGnBu_r, vmax = np.percentile(firstImage, 98),
@@ -232,8 +240,8 @@ for l in range(np.shape(data_flux)[2]):
             ax3.scatter(l,i, marker = 's', s = 50000 / size ** 2, facecolors='none', edgecolors='r')
             ax4.plot(t_pf,flux_1d,'.')
             ax4.set_xlabel('Period = %.4f' % period_[idx[0][0]])
-            ax4.set_ylabel('Normalized Flux')
-            plt.savefig(location + '%.4f [' %np.max(predict) + str(l) + ','+ str(i) + '].png', dpi = 100)
+            ax4.set_ylabel('Detrended Flux')
+            plt.savefig(location  + '[' + str(l) + ','+ str(i) + '] %.4f' %np.max(predict) + '.png', dpi = 100)
             data = Table([data_time[not_outlier], flux_1d], names=['TBJD', 'bkgsubflux'])
             ascii.write(data, location + 'TESS_' + str(target_name) + '[' + str(l) + ','+ str(i)+ '].dat', overwrite=True)
         else:
