@@ -153,6 +153,7 @@ file.close()
 for l in range(np.shape(data_flux)[2]):
     for i in range(np.shape(data_flux)[1]):
         flux_raw = bkgSubFlux[:,i,l]
+        flux_raw -= np.min(flux_raw)
         #eliminate outliers
         mean = np.mean(flux_raw)
         standard_deviation = np.std(flux_raw)
@@ -222,11 +223,11 @@ for l in range(np.shape(data_flux)[2]):
             ax1.text(0.1,0.3,'Period: %.8f' % period_[idx[0][0]], fontsize=10)
             #ax1.text(0.1,0.1,'Other bests: ' + str(0.5 * len(idx) - 1), fontsize=10)
             ax1.text(0.1,0.1,'RA, Dec: ' + str(wcs.all_pix2world([[l,i]],0)), fontsize=10)
-            #ax2.plot(data_time, flux_raw, color = 'silver')
+            ax2.plot(data_time, flux_raw, color = 'silver')
             ax2.set_title(target_name + ' x = ' + str(l ) + ', y = ' + str(i ), fontsize = 15)
-            ax2.set_ylabel('Detrended Flux')
+            ax2.set_ylabel('Background Subtracted Flux')
             ax2.set_xlabel('Time (TBJD)')
-            ax2.plot(data_time[not_outlier], flux_1d, ms = 2, marker = '.', c = 'C1', linestyle = '')
+            ax2.plot(data_time[not_outlier], flux_raw[not_outlier], ms = 2, marker = '.', c = 'C1', linestyle = '')
             ax3.imshow(firstImage, origin = 'lower', cmap = plt.cm.YlGnBu_r, vmax = np.percentile(firstImage, 98),
                        vmin = np.percentile(firstImage, 5))
             ax3.grid(axis = 'both',color = 'white', ls = 'solid')
