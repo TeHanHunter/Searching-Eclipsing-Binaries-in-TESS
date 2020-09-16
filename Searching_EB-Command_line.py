@@ -158,10 +158,14 @@ for l in range(np.shape(data_flux)[2]):
         mean = np.mean(flux_raw)
         standard_deviation = np.std(flux_raw)
         distance_from_mean = abs(flux_raw - mean)
-        max_deviations = 3
+        max_deviations = 2
         not_outlier = distance_from_mean < max_deviations * standard_deviation
         flux_1d = flatten(data_time[not_outlier], flux_raw[not_outlier], break_tolerance = 1 , window_length = 1, return_trend = False)
-        
+
+        #remove nan in flux (causes trouble for cnn)
+        index = np.where(flux_1d >= 0)
+        flux_1d = flux_1d[index]
+        time_1d = data_time[not_outlier][index]
         #make CNN tests
         a_0 = 0.1
         r = 1.05
@@ -174,8 +178,7 @@ for l in range(np.shape(data_flux)[2]):
         for j in range(len(period)):
             p = period[j]
             for k in range(len(t_0)):
-                t_pf = np.array((data_time + t_0[k] * p) % p)
-                t_pf = t_pf[not_outlier]
+                t_pf = np.array((time_1d + t_0[k] * p) % p)
                 t = np.linspace(np.min(t_pf), np.max(t_pf), Sample_number)
                 f = interp1d(t_pf, flux_1d, kind='nearest')
                 flux = f(t)
@@ -193,8 +196,7 @@ for l in range(np.shape(data_flux)[2]):
         for j in range(len(period_)):
             p = period_[j]
             for k in range(len(t_0)):
-                t_pf = np.array((data_time + t_0[k] * p) % p )
-                t_pf = t_pf[not_outlier]
+                t_pf = np.array((time_1d + t_0[k] * p) % p )
                 t = np.linspace(np.min(t_pf), np.max(t_pf), Sample_number)
                 f = interp1d(t_pf, flux_1d, kind='nearest')
                 flux = f(t)
@@ -204,8 +206,7 @@ for l in range(np.shape(data_flux)[2]):
                 
         idx = np.where(predict == np.max(predict))
         p = period_[idx[0][0]]
-        t_pf = np.array((data_time + t_0[idx[1][0]] * p)%p)
-        t_pf = t_pf[not_outlier]
+        t_pf = np.array((time_1d + t_0[idx[1][0]] * p)%p)
         Predict_max[i,l] = np.max(predict)
         #plot
         if np.max(predict) > float(quality):
@@ -243,7 +244,7 @@ for l in range(np.shape(data_flux)[2]):
             ax4.set_xlabel('Period = %.4f' % period_[idx[0][0]])
             ax4.set_ylabel('Detrended Flux')
             plt.savefig(location  + '[' + str(l) + ','+ str(i) + '] %.4f' %np.max(predict) + '.png', dpi = 100)
-            data = Table([data_time[not_outlier], flux_1d], names=['TBJD', 'bkgsubflux'])
+            data = Table([time_1d, flux_1d], names=['TBJD', 'bkgsubflux'])
             ascii.write(data, location + 'TESS_' + str(target_name) + '[' + str(l) + ','+ str(i)+ '].dat', overwrite=True)
         else:
             pass
