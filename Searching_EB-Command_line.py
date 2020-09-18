@@ -160,7 +160,7 @@ for l in range(np.shape(data_flux)[2]):
         distance_from_mean = abs(flux_raw - mean)
         max_deviations = 2
         not_outlier = distance_from_mean < max_deviations * standard_deviation
-        flux_1d = flatten(data_time[not_outlier], flux_raw[not_outlier], break_tolerance = 1 , window_length = 1, return_trend = False)
+        flux_1d = flatten(data_time[not_outlier], flux_raw[not_outlier], break_tolerance = 0.5 , window_length = 2, edge_cutoff= 1, return_trend = False)
 
         #remove nan in flux (causes trouble for cnn)
         index = np.where(flux_1d >= 0)
@@ -228,7 +228,7 @@ for l in range(np.shape(data_flux)[2]):
             ax2.set_title(target_name + ' x = ' + str(l ) + ', y = ' + str(i ), fontsize = 15)
             ax2.set_ylabel('Background Subtracted Flux')
             ax2.set_xlabel('Time (TBJD)')
-            ax2.plot(data_time[not_outlier], flux_raw[not_outlier], ms = 2, marker = '.', c = 'C1', linestyle = '')
+            ax2.plot(data_time[not_outlier][index], flux_raw[not_outlier][index], ms = 2, marker = '.', c = 'C1', linestyle = '')
             ax3.imshow(firstImage, origin = 'lower', cmap = plt.cm.YlGnBu_r, vmax = np.percentile(firstImage, 98),
                        vmin = np.percentile(firstImage, 5))
             ax3.grid(axis = 'both',color = 'white', ls = 'solid')
