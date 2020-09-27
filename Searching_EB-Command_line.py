@@ -70,7 +70,7 @@ def make_cnn(maxlen):
 
 tensorflow.get_logger().setLevel('ERROR') ## ignore internal TensorFlow Warning message
 cnn = make_cnn(Sample_number)
-cnn_weights = input('Trained cnn .h5 file [Default: tess_cnn.h5]: ') or 'tess_cnn.h5'
+cnn_weights = input('Trained cnn .h5 file [Default: tess_cnn_weights.h5]: ') or 'tess_cnn_weights.h5'
 cnn.load_weights(str(cnn_weights))
 
 catalogData = Catalogs.query_object(target_name, radius = radSearch, catalog = "TIC")
@@ -145,7 +145,7 @@ bar = ChargingBar('Finished pixels: ', max = len(mylist), suffix = '%(percent).1
 file = open(location + target_name + '.txt', 'w') 
 file.write('Target Identifier:' + target_name + '\n' +
            'FOV in arcmin (max 33) [Default: 5]:' + FOV + '\n' +
-           'Trained cnn .h5 file [Default: tess_cnn.h5]:' + cnn_weights + '\n' +
+           'Trained cnn .h5 file [Default: tess_cnn_weights.h5]:' + cnn_weights + '\n' +
            'Threshold [Default: 0.95]:' + quality + '\n' +
            'Saving figures to [Default: root]:' + location)
 file.close() 
@@ -160,7 +160,7 @@ for l in range(np.shape(data_flux)[2]):
         distance_from_mean = abs(flux_raw - mean)
         max_deviations = 2
         not_outlier = distance_from_mean < max_deviations * standard_deviation
-        flux_1d = flatten(data_time[not_outlier], flux_raw[not_outlier], break_tolerance = 0.5 , window_length = 2, edge_cutoff= 1, return_trend = False)
+        flux_1d = flatten(data_time[not_outlier], flux_raw[not_outlier], break_tolerance = 0.5 , window_length = 2, edge_cutoff = 0.2, return_trend = False)
 
         #remove nan in flux (causes trouble for cnn)
         index = np.where(flux_1d >= 0)
@@ -207,6 +207,15 @@ for l in range(np.shape(data_flux)[2]):
         idx = np.where(predict == np.max(predict))
         p = period_[idx[0][0]]
         t_pf = np.array((time_1d + t_0[idx[1][0]] * p)%p)
+
+        ###
+        t = np.linspace(np.min(t_pf), np.max(t_pf), Sample_number)
+        inter = interp1d(t_pf, flux_1d, kind='nearest')
+        cnn_flux = inter(t)
+        #cnn_flux /= (np.max(cnn_flux) - np.min(cnn_flux)) / 4
+        #cnn_flux -= np.average(cnn_flux)
+        ###
+        
         Predict_max[i,l] = np.max(predict)
         #plot
         if np.max(predict) > float(quality):
@@ -241,6 +250,7 @@ for l in range(np.shape(data_flux)[2]):
             ax3.set_ylabel('Dec', fontsize = 12)
             ax3.scatter(l,i, marker = 's', s = 50000 / size ** 2, facecolors='none', edgecolors='r')
             ax4.plot(t_pf,flux_1d,'.')
+            ax4.plot(t,cnn_flux)
             ax4.set_xlabel('Period = %.4f' % period_[idx[0][0]])
             ax4.set_ylabel('Detrended Flux')
             plt.savefig(location  + '[' + str(l) + ','+ str(i) + '] %.4f' %np.max(predict) + '.png', dpi = 100)
