@@ -40,9 +40,10 @@ Finished pixels:  ███████████████████∙�
 Change the target and size of the cut to test it on any target. Note: Each TESS pixel is about 21 arcsec wide.
 
 ## Log
-* 8.24.2020: Created Rrepository, uploaded CNN training and Searching EBs folder
-* 8.29.2020: Created .py file to be run in the command line
-* 9.15.2020: Added detrending function
+* 8.24.2020: Created Rrepository, uploaded CNN training and Searching EBs folder.
+* 8.29.2020: Created .py file to be run in the command line.
+* 9.15.2020: Added detrending function (Wotan).
+* 9.26.2020: Updated cnn model (tess_cnn_weights.h5) by using real light curves of TESS.
 
 ## Contributers
 
