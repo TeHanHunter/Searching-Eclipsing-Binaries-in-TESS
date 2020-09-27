@@ -19,7 +19,7 @@ pickle, tensorflow, sklearn, astroquery
 After installing required packages, clone the master folder and run Searching_EB-Command_line.py on a command line. Locate tess_cnn.h5 file in CNN Training folder and you can start using it!
 
 ## Running the Search
-The script askes for several parameters and saves figures and data that are selected by these parameters. The time taken for each pixel is roughly 6 seconds. Below is an example for the open cluster [FSR2007] 0728, which returns the figure shown above. This is a 400 pixel cut, and it took approximately 40 minutes in a test run. 
+The script askes for several parameters and saves figures and data that are selected by these parameters. The time taken for each pixel is roughly 6 seconds on my pc. Below is an example for the open cluster [FSR2007] 0728. This is a 400 pixel cut, and it took approximately 40 minutes in a test run. 
 
 ```
 Target Identifier: [FSR2007] 0728
