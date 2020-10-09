@@ -24,9 +24,10 @@ from astropy.io import fits
 from astropy.io import ascii
 from sklearn import preprocessing
 from astroquery.mast import Tesscut
-from astroquery.mast import Catalogs
-from scipy.interpolate import interp1d
 from progress.bar import ChargingBar
+from astroquery.mast import Catalogs
+import matplotlib.patches as mpatches
+from scipy.interpolate import interp1d
 from astropy.coordinates import SkyCoord
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import SGD
@@ -70,7 +71,7 @@ def make_cnn(maxlen):
 
 tensorflow.get_logger().setLevel('ERROR') ## ignore internal TensorFlow Warning message
 cnn = make_cnn(Sample_number)
-cnn_weights = input('Trained cnn .h5 file [Default: tess_cnn_weights.h5]: ') or 'tess_cnn_weights.h5'
+cnn_weights = input('Trained cnn .h5 file [Default: tess_cnn.h5]: ') or 'tess_cnn.h5'
 cnn.load_weights(str(cnn_weights))
 
 catalogData = Catalogs.query_object(target_name, radius = radSearch, catalog = "TIC")
@@ -141,7 +142,6 @@ indicating the likelihood of including eclipsing binaries in a light curve. 0 is
 quality = input('Threshold [Default: 0.95]: ') or '0.95'
 location = input('Saving figures to [Default: root]: ')
 mylist = np.arange(size ** 2)
-bar = ChargingBar('Finished pixels: ', max = len(mylist), suffix = '%(percent).1f%% Elapsed: %(elapsed)ds Remaining: %(eta)ds')
 file = open(location + target_name + '.txt', 'w') 
 file.write('Target Identifier:' + target_name + '\n' +
            'FOV in arcmin (max 33) [Default: 5]:' + FOV + '\n' +
@@ -150,6 +150,71 @@ file.write('Target Identifier:' + target_name + '\n' +
            'Saving figures to [Default: root]:' + location)
 file.close() 
 
+###produce periods
+a_0 = 0.1
+r = 1.047
+length = 100
+geometric = [a_0 * r ** (n - 1) for n in range(1, length + 1)]
+
+sample_period = np.linspace(0.05,10,1000000)
+std = np.zeros(len(sample_period))
+bar = ChargingBar('Sampling Best Trial Periods: ', max = 1000, suffix = '%(percent).1f%% Elapsed: %(elapsed)ds Remaining: %(eta)ds')
+for i in range(len(sample_period)):
+    p = sample_period[i]
+    t_pf = data_time%p
+    t_pf_sort = np.sort(t_pf)
+    gap = np.diff(t_pf_sort)
+    std[i] = np.std(gap/p)
+    if (i%1000 == 0):
+        bar.next()
+bar.finish()
+std_geo = np.zeros(len(geometric))
+for i in range(len(geometric)):
+    p = geometric[i]
+    t_pf = data_time%p
+    t_pf_sort = np.sort(t_pf)
+    gap = np.diff(t_pf_sort)
+    std_geo[i] = np.std(gap/p)
+    
+f = interp1d(sample_period[np.where(std < 0.0006)],std[np.where(std < 0.0006)], kind='nearest')
+std_mod_p = f(geometric)
+mod_p = np.zeros(len(std_mod_p))
+for i in range(len(std_mod_p)):    
+    mod_p[i] = sample_period[np.where(std == std_mod_p[i])]
+ascii.write([mod_p], location + 'modified_geometric.dat', names=['mod_p'], overwrite=True)
+
+mod_periods = np.zeros((100,100))
+for i in range(len(mod_p)):
+    mod_periods[i] = np.linspace(mod_p[i]/ np.sqrt(r),mod_p[i] * np.sqrt(r), 100)
+
+std_mod_periods = f(mod_periods.reshape((1,10000))[0])
+mod_periods = np.zeros(len(std_mod_periods))
+for i in range(len(std_mod_periods)):    
+    mod_periods[i] = sample_period[np.where(std == std_mod_periods[i])]
+ascii.write(mod_periods.reshape((100,100)).transpose(), location + 'modified_periods.dat', overwrite=True)
+
+plt.figure(figsize = (15,8))
+plt.plot(sample_period,std, lw = .2, c = 'silver')
+plt.plot(sample_period[np.where(std < 0.0006)],std[np.where(std < 0.0006)],'.', c = 'C3', ms = .5)
+#plt.plot(geometric, bad_flux/100000 + 0.01, lw = 1, marker = '.', c = 'C2')
+plt.plot(geometric,std_geo,lw = 1, marker = '.',ms = 5, c = 'C1')
+plt.plot(mod_periods,std_mod_periods, lw = .5, c = 'C9')
+plt.plot(mod_p,std_mod_p,lw = 1, marker = '.',ms = 5, c = 'C0')
+plt.xlabel('Period (days)')
+plt.ylabel('Stdv of (gap/period)')
+plt.ylim(0, 1.2 * np.max(std_geo))
+patch1 = mpatches.Patch(color='C1', label='Geometric Series')
+patch2 = mpatches.Patch(color='C0', label='Modified Geometric (cnn first trial)')
+patch3 = mpatches.Patch(color='C9', label='Modified Periods (cnn second trial)')
+patch4 = mpatches.Patch(color='silver', label='Sampled Periods')
+patch5 = mpatches.Patch(color='C3', label='Sampled Periods with STDV < 0.0006')
+plt.legend(handles=[patch1, patch2, patch3, patch4, patch5], bbox_to_anchor=(0.9, 0.9))
+
+plt.savefig(location  + 'Picked Periods.png', dpi = 300)
+
+
+###Start CNN
+bar = ChargingBar('Finished pixels: ', max = len(mylist), suffix = '%(percent).1f%% Elapsed: %(elapsed)ds Remaining: %(eta)ds')
 for l in range(np.shape(data_flux)[2]):
     for i in range(np.shape(data_flux)[1]):
         flux_raw = bkgSubFlux[:,i,l]
@@ -167,11 +232,7 @@ for l in range(np.shape(data_flux)[2]):
         flux_1d = flux_1d[index]
         time_1d = data_time[not_outlier][index]
         #make CNN tests
-        a_0 = 0.1
-        r = 1.05
-        length = 100
-        geometric = [a_0 * r ** (n - 1) for n in range(1, length + 1)]
-        period = np.array(geometric)
+        period = mod_p       
         t_0 = np.linspace(0,1,20)
         predict = np.zeros((len(period),len(t_0)))
             
@@ -189,7 +250,7 @@ for l in range(np.shape(data_flux)[2]):
         idx = np.where(predict == np.max(predict))
             
         ### repeat in the region near the best result of first step for higher precision
-        period_ = np.linspace(period[idx[0][0]] / r ,period[idx[0][0]] * r,100)
+        period_ = mod_periods.reshape((100,100))[np.where(period == period[idx[0][0]])][0]
         t_0 = np.linspace(0,1,20)
         predict = np.zeros((len(period_),len(t_0)))
     
