@@ -2,7 +2,7 @@
 Using the TESS 30-min interval full frame images, this code searches for eclipsing binaries with convolutional neural network (CNN). 
 
 <!--  -->
-![[FSR2007] 0728 [15,12]](https://user-images.githubusercontent.com/49893001/91675214-6b366900-eaf0-11ea-95d2-8bb495d4a47f.png)
+![10,60  1 0000](https://user-images.githubusercontent.com/49893001/94355126-41f8f200-0036-11eb-89fa-31997ef65cc8.png)
 
 ## Getting Started
 
@@ -19,7 +19,7 @@ pickle, tensorflow, sklearn, astroquery
 After installing required packages, clone the master folder and run Searching_EB-Command_line.py on a command line. Locate tess_cnn.h5 file in CNN Training folder and you can start using it!
 
 ## Running the Search
-The script askes for several parameters and saves figures and data that are selected by these parameters. The time taken for each pixel is roughly 6 seconds. Below is an example for the open cluster [FSR2007] 0728, which returns the figure shown above. This is a 400 pixel cut, and it took approximately 40 minutes in a test run. 
+The script askes for several parameters and saves figures and data that are selected by these parameters. The time taken for each pixel is roughly 6 seconds on my pc. Below is an example for the open cluster [FSR2007] 0728. This is a 400 pixel cut, and it took approximately 40 minutes in a test run. 
 
 ```
 Target Identifier: [FSR2007] 0728
