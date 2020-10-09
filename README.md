@@ -4,6 +4,9 @@ Using the TESS 30-min interval full frame images, this code searches for eclipsi
 <!--  -->
 ![10,60  1 0000](https://user-images.githubusercontent.com/49893001/94355126-41f8f200-0036-11eb-89fa-31997ef65cc8.png)
 
+The periods to test cnn on is carefully chosen to avoid huge time intervals between adjacent data points, which make interpolation do a poor job. The below image shows the difference of standard deviation of time intervals between a blunt choice (geometric series) and a modified choice (slightly different from geometric series, but reduce the stdv below a threshold. 
+![Picked Periods](https://user-images.githubusercontent.com/49893001/95634538-02bb9f80-0a3f-11eb-981f-d2c16084ec94.png)
+
 ## Getting Started
 
 This python script can be used to search for EBs in a cluster or any region of the sky covered by TESS. It returns a graph and .dat document for each pixel, which include information about the CNN prediction on the light curve of the pixel. 
@@ -44,6 +47,7 @@ Change the target and size of the cut to test it on any target. Note: Each TESS 
 * 8.29.2020: Created .py file to be run in the command line.
 * 9.15.2020: Added detrending function (Wotan).
 * 9.26.2020: Updated cnn model (tess_cnn_weights.h5) by using real light curves of TESS.
+* 10.9.2020: Modified periods to test cnn to avoid big time intervals between phase folded data. This inproves the performance of cnn by reducing continuous same value of interpolation. Also validates a cnn with 500 points is a reasonable limit (limiting stdv ~ 0.0006). 
 
 ## Contributers
 
