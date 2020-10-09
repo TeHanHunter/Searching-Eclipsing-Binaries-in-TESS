@@ -44,6 +44,7 @@ Change the target and size of the cut to test it on any target. Note: Each TESS 
 * 8.29.2020: Created .py file to be run in the command line.
 * 9.15.2020: Added detrending function (Wotan).
 * 9.26.2020: Updated cnn model (tess_cnn_weights.h5) by using real light curves of TESS.
+* 10.9.2020: Modified periods to test cnn to avoid big time gaps between phase folded data. This inproves the performance of cnn by reducing continuous same value of interpolation. Also validates a cnn with 500 points is a reasonable limit (limiting stdv ~ 0.0006). 
 
 ## Contributers
 
