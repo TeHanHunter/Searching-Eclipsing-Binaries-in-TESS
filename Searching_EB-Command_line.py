@@ -142,13 +142,6 @@ indicating the likelihood of including eclipsing binaries in a light curve. 0 is
 quality = input('Threshold [Default: 0.95]: ') or '0.95'
 location = input('Saving figures to [Default: root]: ')
 mylist = np.arange(size ** 2)
-file = open(location + target_name + '.txt', 'w') 
-file.write('Target Identifier:' + target_name + '\n' +
-           'FOV in arcmin (max 33) [Default: 5]:' + FOV + '\n' +
-           'Trained cnn .h5 file [Default: tess_cnn_weights.h5]:' + cnn_weights + '\n' +
-           'Threshold [Default: 0.95]:' + quality + '\n' +
-           'Saving figures to [Default: root]:' + location)
-file.close() 
 
 ###produce periods
 a_0 = 0.1
@@ -168,6 +161,7 @@ for i in range(len(sample_period)):
     if (i%1000 == 0):
         bar.next()
 bar.finish()
+
 std_geo = np.zeros(len(geometric))
 for i in range(len(geometric)):
     p = geometric[i]
@@ -175,8 +169,28 @@ for i in range(len(geometric)):
     t_pf_sort = np.sort(t_pf)
     gap = np.diff(t_pf_sort)
     std_geo[i] = np.std(gap/p)
+
+plt.figure(figsize = (15,8))
+plt.plot(sample_period,std, lw = .5, c = 'silver')
+plt.plot([0,10],[0.0006,0.0006], c ='C0')
+plt.plot([0,10],[0.0005,0.0005], c ='C1')
+plt.plot([0,10],[0.0004,0.0004], c ='C2')
+plt.xlabel('Period (days)')
+plt.ylabel('Stdv of (gap/period)')
+plt.ylim(0, 1.2 * np.max(std_geo))
+patch1 = mpatches.Patch(color='silver', label='Sampled Periods')
+patch2 = mpatches.Patch(color='C0', label='0.0006')
+patch3 = mpatches.Patch(color='C1', label='0.0005')
+patch4 = mpatches.Patch(color='C2', label='0.0004')
+plt.legend(handles=[patch1, patch2, patch3, patch4], bbox_to_anchor=(0.9, 0.9))
+plt.savefig(location  + 'STDV Thereshold choice.png', dpi = 300)
+
+print('Now look at the produced image showing period vs standard deviation of time intervals. Choose a threshold to \
+draw test periods from. The data would be better spaced if the threshold is smaller, but notice \
+to make sure there are nearby available periods from 0 to 10 days.') 
+stdv_threshold = input('Threshold of time interval standard deviation [Default 0.0006]: ') or '0.0006'
     
-f = interp1d(sample_period[np.where(std < 0.0006)],std[np.where(std < 0.0006)], kind='nearest')
+f = interp1d(sample_period[np.where(std < float(stdv_threshold))],std[np.where(std < float(stdv_threshold))], kind='nearest')
 std_mod_p = f(geometric)
 mod_p = np.zeros(len(std_mod_p))
 for i in range(len(std_mod_p)):    
@@ -195,10 +209,10 @@ ascii.write(mod_periods.reshape((100,100)).transpose(), location + 'modified_per
 
 plt.figure(figsize = (15,8))
 plt.plot(sample_period,std, lw = .2, c = 'silver')
-plt.plot(sample_period[np.where(std < 0.0006)],std[np.where(std < 0.0006)],'.', c = 'C3', ms = .5)
+plt.plot(sample_period[np.where(std < float(stdv_threshold))],std[np.where(std < float(stdv_threshold))],'.', c = 'C3', ms = .5)
 #plt.plot(geometric, bad_flux/100000 + 0.01, lw = 1, marker = '.', c = 'C2')
-plt.plot(geometric,std_geo,lw = 1, marker = '.',ms = 5, c = 'C1')
 plt.plot(mod_periods,std_mod_periods, lw = .5, c = 'C9')
+plt.plot(geometric,std_geo,lw = 1, marker = '.',ms = 5, c = 'C1')
 plt.plot(mod_p,std_mod_p,lw = 1, marker = '.',ms = 5, c = 'C0')
 plt.xlabel('Period (days)')
 plt.ylabel('Stdv of (gap/period)')
@@ -209,9 +223,16 @@ patch3 = mpatches.Patch(color='C9', label='Modified Periods (cnn second trial)')
 patch4 = mpatches.Patch(color='silver', label='Sampled Periods')
 patch5 = mpatches.Patch(color='C3', label='Sampled Periods with STDV < 0.0006')
 plt.legend(handles=[patch1, patch2, patch3, patch4, patch5], bbox_to_anchor=(0.9, 0.9))
-
 plt.savefig(location  + 'Picked Periods.png', dpi = 300)
 
+file = open(location + target_name + '.txt', 'w') 
+file.write('Target Identifier:' + target_name + '\n' +
+           'FOV in arcmin (max 33) [Default: 5]:' + FOV + '\n' +
+           'Trained cnn .h5 file [Default: tess_cnn_weights.h5]:' + cnn_weights + '\n' +
+           'Threshold [Default: 0.95]:' + quality + '\n' +
+           'Saving figures to [Default: root]:' + location + '\n' +
+           'Threshold of time interval standard deviation [Default 0.0006]: ' + stdv_threshold)
+file.close()
 
 ###Start CNN
 bar = ChargingBar('Finished pixels: ', max = len(mylist), suffix = '%(percent).1f%% Elapsed: %(elapsed)ds Remaining: %(eta)ds')
