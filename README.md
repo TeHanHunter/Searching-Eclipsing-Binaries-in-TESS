@@ -1,5 +1,5 @@
 # Searching-Eclipsing-Binaries-with-TESS
-Using the TESS 30-min interval full frame images, this code searches for eclipsing binaries with convolutional neural network (CNN). 
+Using the TESS 30-min interval full frame images, this code searches for eclipsing binaries with convolutional neural network (CNN). With `Batman`, the code produces pseudo light curves of EBs and trains a CNN model with them. This model is then used on each pixel of full frame images produced by TESScut. The output includes all light curves with high value cnn predictions above an arbitrary value. The image below is a sample result. 
 
 <!--  -->
 ![10,60  1 0000](https://user-images.githubusercontent.com/49893001/94355126-41f8f200-0036-11eb-89fa-31997ef65cc8.png)
@@ -47,7 +47,7 @@ Change the target and size of the cut to test it on any target. Note: Each TESS 
 * 8.29.2020: Created .py file to be run in the command line.
 * 9.15.2020: Added detrending function (Wotan).
 * 9.26.2020: Updated cnn model (tess_cnn_weights.h5) by using real light curves of TESS.
-* 10.9.2020: Modified periods to test cnn to avoid big time intervals between phase folded data. This inproves the performance of cnn by reducing continuous same value of interpolation. Also validates a cnn with 500 points is a reasonable limit (limiting stdv ~ 0.0006). 
+* 10.9.2020: Modified periods to test cnn to avoid big time intervals between phase folded data. This inproves the performance of cnn by reducing continuous same value after interpolation. Also validates a cnn with 500 points is a reasonable limit (limiting stdv of interval/period ~ 0.0006). 
 
 ## Contributers
 
