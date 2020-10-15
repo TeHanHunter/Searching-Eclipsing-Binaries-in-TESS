@@ -4,7 +4,7 @@ Using the TESS 30-min interval full frame images, this code searches for eclipsi
 <!--  -->
 ![10,60  1 0000](https://user-images.githubusercontent.com/49893001/94355126-41f8f200-0036-11eb-89fa-31997ef65cc8.png)
 
-The periods to test cnn on is carefully chosen to avoid huge time intervals between adjacent data points, which make interpolation do a poor job. The below image shows the difference of standard deviation of time intervals between a blunt choice (geometric series) and a modified choice (slightly different from geometric series, but reduce the stdv below a threshold. 
+The periods to test cnn on is carefully chosen to avoid huge time intervals between adjacent data points, which make interpolation do a poor job. The below image shows the difference of standard deviation of time intervals between a blunt choice (geometric series) and a modified choice (slightly different from geometric series, but reduce the stdv below a threshold). 
 ![Picked Periods](https://user-images.githubusercontent.com/49893001/95634538-02bb9f80-0a3f-11eb-981f-d2c16084ec94.png)
 
 ## Getting Started
