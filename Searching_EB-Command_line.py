@@ -121,18 +121,25 @@ def make_lc(flux_data, aperture):
 
     return flux
 
-aperture = hdu1[2].data == 1
-flux1 = make_lc(hdu1[1].data['FLUX'], aperture)
-time1 = hdu1[1].data['TIME']
 
-bkgAperture = hdu1[1].data['FLUX'][0] < np.percentile(hdu1[1].data['FLUX'][0], 4)
-bkgFlux1 = make_lc(hdu1[1].data['FLUX'], bkgAperture)
 
 data_time = hdu1[1].data['TIME']
 data_flux = hdu1[1].data['FLUX']
-data_flux.reshape(np.shape(data_time)[0], size ** 2)
+data_flux_err = hdu1[1].data['FLUX_ERR']
+data_quality = hdu1[1].data['QUALITY']
+
+data_time = data_time[np.where(data_quality == 0)]
+data_flux = data_flux[np.where(data_quality == 0),:,:][0]
+data_flux_err = data_flux_err[np.where(data_quality == 0),:,:][0]
+data_quality = data_quality[np.where(data_quality == 0)]
+#Remove background
+aperture = hdu1[2].data == 1
+flux1 = make_lc(data_flux, aperture)
+
+bkgAperture = data_flux[0] < np.percentile(data_flux[0], 4)
+bkgFlux1 = make_lc(data_flux, bkgAperture)
+
 flux_2d = data_flux.reshape(np.shape(data_time)[0],size ** 2)
-#minus median
 yy, background, xx= np.meshgrid(data_flux[0,:,0], bkgFlux1, data_flux[0,0,:])
 bkgSubFlux = data_flux - background / np.sum(bkgAperture)
 
@@ -244,14 +251,17 @@ for l in range(np.shape(data_flux)[2]):
         mean = np.mean(flux_raw)
         standard_deviation = np.std(flux_raw)
         distance_from_mean = abs(flux_raw - mean)
-        max_deviations = 2
+        max_deviations = 3
         not_outlier = distance_from_mean < max_deviations * standard_deviation
-        flux_1d = flatten(data_time[not_outlier], flux_raw[not_outlier], break_tolerance = 0.5 , window_length = 2, edge_cutoff = 0.2, return_trend = False)
+        flux_1d = flatten(data_time[not_outlier], flux_raw[not_outlier], break_tolerance = 0.5 , window_length = 2, edge_cutoff = 0.5, return_trend = False)
 
         #remove nan in flux (causes trouble for cnn)
         index = np.where(flux_1d >= 0)
         flux_1d = flux_1d[index]
         time_1d = data_time[not_outlier][index]
+        flux_err_1d = data_flux_err[:,i,l][not_outlier][index]
+        quality_1d = data_quality[not_outlier][index]
+        
         #make CNN tests
         period = mod_p       
         t_0 = np.linspace(0,1,20)
@@ -331,12 +341,12 @@ for l in range(np.shape(data_flux)[2]):
             ax3.set_xlabel('RA', fontsize = 12)
             ax3.set_ylabel('Dec', fontsize = 12)
             ax3.scatter(l,i, marker = 's', s = 50000 / size ** 2, facecolors='none', edgecolors='r')
-            ax4.plot(t_pf,flux_1d,'.')
-            ax4.plot(t,cnn_flux)
+            ax4.errorbar(t_pf,flux_1d * mean, flux_err_1d, marker = '.', ms = 2, ls = '', elinewidth = 0.4, ecolor = 'silver', c = 'darkgrey')
+            ax4.plot(t,cnn_flux * mean, c = 'C1', lw = 0.8)
             ax4.set_xlabel('Period = %.4f' % period_[idx[0][0]])
-            ax4.set_ylabel('Detrended Flux')
+            ax4.set_ylabel('Detrended Phase Folded Flux')
             plt.savefig(location  + '[' + str(l) + ','+ str(i) + '] %.4f' %np.max(predict) + '.png', dpi = 100)
-            data = Table([time_1d, flux_1d], names=['TBJD', 'bkgsubflux'])
+            data = Table([time_1d, flux_1d * mean, flux_err_1d, quality_1d], names=['TBJD', 'bkgsubflux', 'flux_err', 'quality'])
             ascii.write(data, location + 'TESS_' + str(target_name) + '[' + str(l) + ','+ str(i)+ '].dat', overwrite=True)
         else:
             pass
