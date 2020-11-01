@@ -49,7 +49,8 @@ Change the target and size of the cut to test it on any target. Note: Each TESS 
 * 9.15.2020: Added detrending function (Wotan).
 * 9.26.2020: Updated cnn model (tess_cnn_weights.h5) by using real light curves of TESS.
 * 10.9.2020: Modified periods to test cnn to avoid big time intervals between phase folded data. This inproves the performance of cnn by reducing continuous same value after interpolation. Also validates a cnn with 500 points is a reasonable limit (limiting stdv of interval/period ~ 0.0006). 
-* 10.24.202: Removed low quality data and added flux error to the output file to be ready for an MCMC fit.
+* 10.24.2020: Removed low quality data and added flux error to the output file to be ready for an MCMC fit.
+* 10.31.2020: Optimized choice of periods, increase the speed by a factor of 3. Add colormap of maximum predictions. Added two new cnn models, 'tess_cnn_sparse.h5' and 'tess_cnn_strict.h5'.
 
 ## Contributers
 
