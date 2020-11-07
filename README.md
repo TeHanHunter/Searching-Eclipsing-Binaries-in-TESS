@@ -1,12 +1,13 @@
 # Searching-Eclipsing-Binaries-with-TESS
 Using the TESS 30-min interval full frame images, this code searches for eclipsing binaries with convolutional neural network (CNN). With `Batman`, the code produces pseudo light curves of EBs and trains a CNN model with them. This model is then used on each pixel of full frame images produced by TESScut. The output includes all light curves with high value cnn predictions above an arbitrary threshold. The image below is a sample result. 
 
-<!--  -->
+<!-- <img src=https://user-images.githubusercontent.com/49893001/97091618-0a0fab00-15f2-11eb-926e-097c558bb119.png width = '1024'> -->
 ![10,60  1 0000](https://user-images.githubusercontent.com/49893001/97091618-0a0fab00-15f2-11eb-926e-097c558bb119.png)
+The periods to test cnn on is carefully chosen to avoid huge time intervals between adjacent data points, which make interpolation do a poor job. The below image shows the difference of standard deviation of time intervals between a blunt choice (geometric series) and a modified choice (slightly different from geometric series, but reduce the stdv below a threshold).
 
-The periods to test cnn on is carefully chosen to avoid huge time intervals between adjacent data points, which make interpolation do a poor job. The below image shows the difference of standard deviation of time intervals between a blunt choice (geometric series) and a modified choice (slightly different from geometric series, but reduce the stdv below a threshold). 
-![Picked Periods](https://user-images.githubusercontent.com/49893001/95634538-02bb9f80-0a3f-11eb-981f-d2c16084ec94.png)
-
+<p align="center">
+  <img src=https://user-images.githubusercontent.com/49893001/95634538-02bb9f80-0a3f-11eb-981f-d2c16084ec94.png width = '768'>
+</p>
 ![5,5  0 9974](https://user-images.githubusercontent.com/49893001/98451299-4dd9d880-20f9-11eb-91ad-68c571af6473.png)
 
 TIC 199688409 was observed in 13 sectors and have data spanning nearly a year. The code finds a period with much higher precision (and takes more time). 
