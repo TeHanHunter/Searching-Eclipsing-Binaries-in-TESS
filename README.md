@@ -8,6 +8,7 @@ The periods to test cnn on is carefully chosen to avoid huge time intervals betw
 <p align="center">
   <img src=https://user-images.githubusercontent.com/49893001/95634538-02bb9f80-0a3f-11eb-981f-d2c16084ec94.png width = '768'>
 </p>
+
 ![5,5  0 9974](https://user-images.githubusercontent.com/49893001/98451299-4dd9d880-20f9-11eb-91ad-68c571af6473.png)
 
 TIC 199688409 was observed in 13 sectors and have data spanning nearly a year. The code finds a period with much higher precision (and takes more time). 
