@@ -9,8 +9,8 @@ The periods to test cnn on is carefully chosen to avoid huge time intervals betw
   <img src=https://user-images.githubusercontent.com/49893001/95634538-02bb9f80-0a3f-11eb-981f-d2c16084ec94.png width = '768'>
 </p>
 
-TIC 199688409 was observed in 13 sectors and have data spanning nearly a year. The code finds a period with much higher precision (and takes more time). This can only test singular star target. 
-![5,5  0 9974](https://user-images.githubusercontent.com/49893001/98451299-4dd9d880-20f9-11eb-91ad-68c571af6473.png)
+This star in the cluster NGC 7654 was observed in 2 sectors and have data spanning nearly half a year. The code finds a period with much higher precision.
+![5,19  1 0000](https://user-images.githubusercontent.com/49893001/99491939-8790b780-2921-11eb-87c3-0899ab9a777d.jpg)
 
 
 ## Getting Started
@@ -29,6 +29,8 @@ After installing required packages, clone the master folder and run Searching_EB
 
 ## Running the Search
 The script askes for several parameters and saves figures and data that are selected by these parameters. The time taken for each pixel is roughly 6 seconds on my pc. Below is an example for the open cluster Trumpler 5. This is a 5184 pixel cut, and it took approximately 8.5 hours in a test run. 
+
+Note: Now the speed is improved to ~ 1.4s per pixel. 
 
 ```
 Target Identifier: Trumpler 5
@@ -58,6 +60,7 @@ Change the target and size of the cut to test it on any target. Note: Each TESS 
 * 10.24.2020: Removed low quality data and added flux error to the output file to be ready for an MCMC fit.
 * 10.31.2020: Optimized choice of periods, increasing the speed by a factor of 3. Added colormap of maximum predictions. Added two new cnn models, 'tess_cnn_sparse.h5' and 'tess_cnn_strict.h5'.
 * 11.7.2020: Added new program to test multiple sector data if the target is observed more than once. Tested on targets observed for 13 sectors (nearly a year long). Note: only possible on singular star target, searching for large FFI results in misalignment. 
+* 11.17.2020: The multiple sector search is now ready for full clusters. Uses WCS to align sectors, and check for out-of-edge pixels. In NGC 7654 (~ 1000 stars), the search identified about 10 possible EBs. 
 
 ## Contributers
 
