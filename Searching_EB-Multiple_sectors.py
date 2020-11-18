@@ -128,10 +128,9 @@ def make_lc(flux_data, aperture):
 
     return flux
 
-
-
 def get_cut(observe_times):
     hdu1 = hdulist[observe_times]
+    wcs = WCS(hdu1[2].header)
     data_time = hdu1[1].data['TIME']
     data_flux = hdu1[1].data['FLUX']
     data_flux_err = hdu1[1].data['FLUX_ERR']
@@ -140,36 +139,30 @@ def get_cut(observe_times):
     data_time = data_time[np.where(data_quality == 0)]
     data_flux = data_flux[np.where(data_quality == 0),:,:][0]
     data_flux_err = data_flux_err[np.where(data_quality == 0),:,:][0]
-    data_quality = data_quality[np.where(data_quality == 0)]
+
     #Remove background
-    aperture = hdu1[2].data == 1
-#     flux1 = make_lc(data_flux, aperture)
     bkgAperture = data_flux[0] < np.percentile(data_flux[0], 4)
     bkgFlux1 = make_lc(data_flux, bkgAperture)
-
-    flux_2d = data_flux.reshape(np.shape(data_time)[0],size ** 2)
     yy, background, xx= np.meshgrid(data_flux[0,:,0], bkgFlux1, data_flux[0,0,:])
     bkgSubFlux = data_flux - background / np.sum(bkgAperture)
-    return data_time, bkgSubFlux, data_flux_err, bkgAperture
+    return data_time, bkgSubFlux, data_flux_err, bkgAperture, wcs
 
-data_time = []
-bkgSubFlux = [np.zeros((size,size))]
-data_flux_err = [np.zeros((size,size))]
+data_time = {}
+bkgSubFlux = {}
+data_flux_err = {}
+wcs_projection = {}
+bkgAperture = {}
 length_sector = np.zeros(np.shape(sectorTable)[0])
 
-for obs_time in range(len(hdulist)):
-    if obs_time == 0:
-        data_time_, bkgSubFlux_, data_flux_err_, bkgAperture = get_cut(obs_time)
-    else:
-        data_time_, bkgSubFlux_, data_flux_err_, bkgApe = get_cut(obs_time)
-    data_time = np.append(data_time, data_time_)
-    bkgSubFlux = np.append(bkgSubFlux, bkgSubFlux_, axis = 0)
-    data_flux_err = np.append(data_flux_err, data_flux_err_, axis = 0)
-    length_sector[obs_time] = len(data_time_)
-
-bkgSubFlux = bkgSubFlux[1:]
-data_flux_err = data_flux_err[1:]
-
+for i, sector in enumerate(sectorTable['sector']):
+    data_time_, bkgSubFlux_, data_flux_err_, bkgAperture_, wcs = get_cut(i)
+    data_time[f'time_{sector}'] = data_time_
+    bkgSubFlux[f'flux_{sector}'] = bkgSubFlux_
+    data_flux_err[f'flux_err_{sector}'] = data_flux_err_
+    wcs_projection[f'wcs_{sector}'] = wcs
+    length_sector[i] = len(data_time_)
+    bkgAperture[f'bkg_Aper_{sector}'] = bkgAperture_
+first_sector = sectorTable['sector'][0]
 
 Predict_max = np.zeros((size, size))
 print('Please choose a threshold to save a figure. This number is the prediction given by cnn, \
@@ -199,7 +192,7 @@ std = np.zeros(len(sample_period))
 bar = ChargingBar('Sampling Best Trial Periods: ', max = 100, suffix = '%(percent).1f%% Elapsed: %(elapsed)ds Remaining: %(eta)ds')
 for i in range(len(sample_period)):
     p = sample_period[i]
-    t_pf = data_time%p
+    t_pf = data_time['time_' + str(first_sector)]%p
     t_pf_sort = np.sort(t_pf)
     gap = np.diff(t_pf_sort)
     std[i] = np.std(gap/p)
@@ -210,7 +203,7 @@ bar.finish()
 std_geo = np.zeros(len(geometric))
 for i in range(len(geometric)):
     p = geometric[i]
-    t_pf = data_time%p
+    t_pf = data_time['time_' + str(first_sector)]%p
     t_pf_sort = np.sort(t_pf)
     gap = np.diff(t_pf_sort)
     std_geo[i] = np.std(gap/p)
@@ -234,7 +227,7 @@ print('Now look at the produced image showing period vs standard deviation of ti
 draw test periods from. The data would be better spaced if the threshold is smaller, but notice \
 to make sure there are nearby available periods from 0 to 10 days.') 
 stdv_threshold = input('Threshold of time interval standard deviation [Default 0.0005]: ') or '0.0005'
-    
+
 f = interp1d(sample_period[np.where(std < float(stdv_threshold))],std[np.where(std < float(stdv_threshold))], kind='nearest')
 std_mod_p = f(geometric)
 mod_p = np.zeros(len(std_mod_p))
@@ -273,7 +266,7 @@ plt.savefig(location  + 'Picked Periods.png', dpi = 300)
 file = open(location + target_name + '.txt', 'w') 
 file.write('Target Identifier:' + target_name + '\n' +
            'FOV in arcmin (max 33) [Default: 5]:' + FOV + '\n' +
-           'Trained cnn .h5 file [Default: tess_cnn_weights.h5]:' + cnn_weights + '\n' +
+           'Trained cnn .h5 file [Default: tess_cnn.h5]:' + cnn_weights + '\n' +
            'Threshold [Default: 0.95]:' + quality + '\n' +
            'Saving figures to [Default: root]:' + location + '\n' +
            'Threshold of time interval standard deviation [Default 0.0005]: ' + stdv_threshold)
@@ -281,145 +274,159 @@ file.close()
 
 ###Start CNN
 bar = ChargingBar('Finished pixels: ', max = len(mylist), suffix = '%(percent).1f%% Elapsed: %(elapsed)ds Remaining: %(eta)ds')
-for l in range(np.shape(bkgSubFlux)[2]):
-    for i in range(np.shape(bkgSubFlux)[1]):
-        flux_raw = bkgSubFlux[:,i,l]
-
+for l in range(size):
+    for i in range(size):
+        time_raw = data_time['time_'+ str(first_sector)]
+        flux_raw = bkgSubFlux['flux_'+ str(first_sector)][:,i,l]
+        flux_err_1d = data_flux_err['flux_err_'+ str(first_sector)][:,i,l]
+        coordinate = wcs_projection['wcs_' + str(first_sector)].all_pix2world([[l,i]], 0)
+        for sector in sectorTable['sector'][1:]:
+            pix_index = np.round(wcs_projection['wcs_' + str(sector)].all_world2pix(coordinate, 0))
+            new_l = int(pix_index[0][0])
+            new_i = int(pix_index[0][1])
+            if new_i >= 0 and new_i < size and new_l >= 0 and new_l < size and np.mean(bkgSubFlux['flux_'+ str(sector)][:, new_i, new_l]) > 0.1:    
+                time_raw = np.append(time_raw, data_time['time_'+ str(sector)])
+                flux_raw = np.append(flux_raw, bkgSubFlux['flux_'+ str(sector)][:,new_i,new_l], axis = 0)
+                flux_err_1d = np.append(flux_err_1d, data_flux_err['flux_err_'+ str(sector)][:,new_i,new_l], axis = 0)
         #remove nan in flux
         index = np.invert(np.isnan(flux_raw))
         flux_raw = flux_raw[index]
-        time_1d = data_time[index]
-        flux_err_1d = data_flux_err[:,i,l][index]
-        quality_1d = np.ones(np.shape(data_time))[index]
-
-        flux_raw -= np.min(flux_raw)
-        mean = np.mean(flux_raw)
-        flux_1d = flatten(time_1d, flux_raw, break_tolerance = 0.5 , window_length = 1, edge_cutoff = 1, return_trend = False)
-
-        #remove nan in flux again(causes trouble for cnn)
-        index = np.invert(np.isnan(flux_1d))
-        flux_1d = flux_1d[index]
-        time_1d = time_1d[index]
+        time_raw = time_raw[index]
         flux_err_1d = flux_err_1d[index]
-        quality_1d = quality_1d[index]
-
-        #eliminate outliers
-        mean_1d = np.mean(flux_1d)
-        standard_deviation = np.std(flux_1d)
-        distance_from_mean = abs(flux_1d - mean_1d)
-        max_deviations = 3
-        not_outlier = distance_from_mean < max_deviations * standard_deviation
-
-        flux_1d = flux_1d[not_outlier]
-        time_1d = time_1d[not_outlier]
-        flux_err_1d = flux_err_1d[not_outlier]
-        quality_1d = quality_1d[not_outlier]
-        
-        #make CNN tests
-        period = mod_p       
-        t_0 = np.linspace(-0.1, 0.1, 5)
-        predict = np.zeros((len(period),len(t_0)))
-        cut = int(min(len(time_1d), length_sector[0]))
-        argsort = flux_1d[0:cut].argsort()
-        
-        for j in range(len(period)):
-            p = period[j]
-            t_zero = np.median(time_1d[0:cut][argsort][0:20] % p)/ p
-            for k in range(len(t_0)):
-                t_pf = np.array((time_1d[0:cut] + (0.5 - t_zero + t_0[k]) * p) % p )
-                t = np.linspace(np.min(t_pf), np.max(t_pf), Sample_number)
-                f = interp1d(t_pf, flux_1d[0:cut], kind='nearest')
-                flux = f(t)
-                #np.max(flux) - np.min(flux) np.percentile(flux, 100) - np.percentile(flux, 0)
-                flux /= (np.max(flux) - np.min(flux)) / 4
-                flux -= np.average(flux)
-                predict[j][k] = cnn.predict(flux.reshape((1, Sample_number, 1)))
-            if np.max(predict) >= 0.99999:
-                break
-        idx = np.where(predict == np.max(predict))
-         
-        ### repeat in the region near the best result of first step for higher precision
-        period_ = mod_periods.reshape((first_trial,second_trial))[np.where(period == period[idx[0][0]])][0]
-        
-        t_0_ = np.linspace(-0.1, 0.1, 5)
-        predict = np.zeros((len(period_),len(t_0_)))
-        for j in range(len(period_)):
-            p = period_[j]
-            t_zero = np.mean(time_1d[argsort][0:5]% p) / p
-            for k in range(len(t_0_)):
-                t_pf = np.array((time_1d + (0.5 - t_zero + t_0_[k]) * p) % p )
-                t = np.linspace(np.min(t_pf), np.max(t_pf), Sample_number)
-                f = interp1d(t_pf, flux_1d, kind='nearest')
-                flux = f(t)
-                flux /= (np.max(flux) - np.min(flux)) / 4
-                flux -= np.average(flux)
-                predict[j][k] = cnn.predict(flux.reshape((1, Sample_number, 1)))
-            if np.max(predict) >= 0.99999:
-                break
-
-        idx = np.where(predict == np.max(predict))
-        p = period_[idx[0][0]]
-        t_zero = np.mean(time_1d[argsort][0:5]% p) / p
-        t_pf = np.array((time_1d + (0.5 - t_zero + t_0_[idx[1][0]]) * p) % p )
-        ###
-        t = np.linspace(np.min(t_pf), np.max(t_pf), Sample_number)
-        inter = interp1d(t_pf, flux_1d, kind='nearest')
-        cnn_flux = inter(t)
-        #cnn_flux /= (np.max(cnn_flux) - np.min(cnn_flux)) / 4
-        #cnn_flux -= np.average(cnn_flux)
-        ###
-        
-        Predict_max[i,l] = np.max(predict)
-        #plot
-        if np.max(predict) >= float(quality):
-            fig = plt.figure(constrained_layout = False, figsize=(15, 7))
-            gs = fig.add_gridspec(3, 3)
-            gs.update(wspace = 0.3, hspace = 0.4)
-            ax1 = fig.add_subplot(gs[0, 0])
-            ax2 = fig.add_subplot(gs[0, 1:])
-            ax3 = fig.add_subplot(gs[1:, 0], projection = wcs)
-            ax4 = fig.add_subplot(gs[1:, 1:])
-                
-            ax1.axis('off')
-            ax1.text(0.1,0.8,'%.4f' % np.max(predict), fontsize=40)
-            ax1.text(0.1,0.5,'CNN prediction: %.8f' % np.max(predict), fontsize=10)
-            ax1.text(0.1,0.3,'Period: %.8f' % period_[idx[0][0]], fontsize=10)
-            #ax1.text(0.1,0.1,'Other bests: ' + str(0.5 * len(idx) - 1), fontsize=10)
-            ax1.text(0.1,0.1,'RA, Dec: ' + str(wcs.all_pix2world([[l,i]],0)), fontsize=10)
-            ax2.plot(data_time, bkgSubFlux[:,i,l], color = 'silver')
-            ax2.set_title(target_name + ' x = ' + str(l ) + ', y = ' + str(i ), fontsize = 15)
-            ax2.set_ylabel('Background Subtracted Flux')
-            ax2.set_xlabel('Time (TBJD)')
-            ax2.plot(time_1d, flux_raw[index][not_outlier], ms = 2, marker = '.', c = 'C1', linestyle = '')
-            ax3.imshow(firstImage, origin = 'lower', cmap = plt.cm.YlGnBu_r, vmax = np.percentile(firstImage, 98),
-                       vmin = np.percentile(firstImage, 5))
-            ax3.grid(axis = 'both',color = 'white', ls = 'solid')
-            ax3.imshow(bkgAperture,cmap=cmap)
-            ax3.scatter(nearbyLoc[0:, 0], nearbyLoc[0:, 1], s = 200 / size, color = 'C1')
-            ax3.set_xlim(-0.5,size - 0.5)
-            ax3.set_ylim(-0.5,size - 0.5)
-            ax3.set_xlabel('RA', fontsize = 12)
-            ax3.set_ylabel('Dec', fontsize = 12)
-            ax3.scatter(l,i, marker = 's', s = 50000 / size ** 2, facecolors='none', edgecolors='r')
-            ax4.errorbar(t_pf,flux_1d * mean, flux_err_1d, marker = '.', ms = 2, ls = '', elinewidth = 0.4, ecolor = 'silver', c = 'darkgrey', zorder = 1)
-            ax4.plot(t,cnn_flux * mean, c = 'C1', lw = 0.8, zorder = 2)
-            ax4.set_xlabel('Period = %.4f' % period_[idx[0][0]])
-            ax4.set_ylabel('Detrended Phase Folded Flux')
-            plt.savefig(location  + '[' + str(l) + ','+ str(i) + '] %.4f' %np.max(predict) + '.png', dpi = 100)
-            data = Table([time_1d, flux_1d * mean, flux_err_1d, quality_1d], names=['TBJD', 'bkgsubflux', 'flux_err', 'quality'])
-            ascii.write(data, location + 'TESS_' + str(target_name) + '[' + str(l) + ','+ str(i)+ '].dat', overwrite=True)
+        quality_1d = np.ones(np.shape(time_raw))
+        if min(flux_raw) < 0:
+            bar.next()
+            continue
         else:
-            pass
-        bar.next()
+    #         flux_raw -= np.min(flux_raw)
+            mean = np.mean(flux_raw)
+            flux_1d = flatten(time_raw, flux_raw, break_tolerance = 0.1 , window_length = .4, edge_cutoff = .2, return_trend = False)
+
+            #remove nan in flux again(causes trouble for cnn)
+            index = np.invert(np.isnan(flux_1d))
+            flux_1d = flux_1d[index]
+            time_1d = time_raw[index]
+            flux_err_1d = flux_err_1d[index]
+            quality_1d = quality_1d[index]
+
+    #         #eliminate outliers
+            mean_1d = np.mean(flux_1d)
+    #         standard_deviation = np.std(flux_1d)
+    #         distance_from_mean = abs(flux_1d - mean_1d)
+    #         max_deviations = 3
+    #         not_outlier = distance_from_mean < max_deviations * standard_deviation
+
+    #         flux_1d = flux_1d[not_outlier]
+    #         time_1d = time_1d[not_outlier]
+    #         flux_err_1d = flux_err_1d[not_outlier]
+    #         quality_1d = quality_1d[not_outlier]
+            
+            #make CNN tests
+            period = mod_p       
+            t_0 = np.linspace(-0.1, 0.1, 5)
+            predict = np.zeros((len(period),len(t_0)))
+            cut = int(min(len(time_1d), length_sector[0]))
+            argsort = flux_1d[0:cut].argsort()
+            
+            for j in range(len(period)):
+                p = period[j]
+                t_zero = np.median(time_1d[0:cut][argsort][0:20] % p)/ p
+                for k in range(len(t_0)):
+                    t_pf = np.array((time_1d[0:cut] + (0.5 - t_zero + t_0[k]) * p) % p )
+                    t = np.linspace(np.min(t_pf), np.max(t_pf), Sample_number)
+                    f = interp1d(t_pf, flux_1d[0:cut], kind = 'nearest')
+                    flux = f(t)
+                    #np.max(flux) - np.min(flux) np.percentile(flux, 100) - np.percentile(flux, 0)
+                    flux /= (np.max(flux) - np.min(flux)) / 4
+                    flux -= np.average(flux)
+                    predict[j][k] = cnn.predict(flux.reshape((1, Sample_number, 1)))
+                if np.max(predict) >= 0.99999:
+                    break
+            idx = np.where(predict == np.max(predict))
+            if np.max(predict) < 0.5:
+                bar.next()
+                continue
+            else:
+                ### repeat in the region near the best result of first step for higher precision
+                period_ = mod_periods.reshape((first_trial,second_trial))[np.where(period == period[idx[0][0]])][0]
+
+                t_0_ = np.linspace(-0.1, 0.1, 5)
+                predict = np.zeros((len(period_),len(t_0_)))
+                for j in range(len(period_)):
+                    p = period_[j]
+                    t_zero = np.mean(time_1d[argsort][0:5]% p) / p
+                    for k in range(len(t_0_)):
+                        t_pf = np.array((time_1d + (0.5 - t_zero + t_0_[k]) * p) % p )
+                        t = np.linspace(np.min(t_pf), np.max(t_pf), Sample_number)
+                        f = interp1d(t_pf, flux_1d, kind = 'nearest')
+                        flux = f(t)
+                        flux /= (np.max(flux) - np.min(flux)) / 4
+                        flux -= np.average(flux)
+                        predict[j][k] = cnn.predict(flux.reshape((1, Sample_number, 1)))
+
+                idx = np.where(predict == np.max(predict))
+                p = period_[idx[0][0]]
+                t_zero = np.mean(time_1d[argsort][0:5]% p) / p
+                t_pf = np.array((time_1d + (0.5 - t_zero + t_0_[idx[1][0]]) * p) % p )
+                ###
+                t = np.linspace(np.min(t_pf), np.max(t_pf), Sample_number)
+                inter = interp1d(t_pf, flux_1d, kind='nearest')
+                cnn_flux = inter(t)
+                #cnn_flux /= (np.max(cnn_flux) - np.min(cnn_flux)) / 4
+                #cnn_flux -= np.average(cnn_flux)
+                ###
+
+                Predict_max[i,l] = np.max(predict)
+                #plot
+                if np.max(predict) >= float(quality):
+                    fig = plt.figure(constrained_layout = False, figsize=(15, 7))
+                    gs = fig.add_gridspec(3, 3)
+                    gs.update(wspace = 0.3, hspace = 0.4)
+                    ax1 = fig.add_subplot(gs[0, 0])
+                    ax2 = fig.add_subplot(gs[0, 1:])
+                    ax3 = fig.add_subplot(gs[1:, 0], projection = wcs)
+                    ax4 = fig.add_subplot(gs[1:, 1:])
+
+                    ax1.axis('off')
+                    ax1.text(0.1,0.8,'%.4f' % np.max(predict), fontsize=40)
+                    ax1.text(0.1,0.5,'CNN prediction: %.8f' % np.max(predict), fontsize=10)
+                    ax1.text(0.1,0.3,'Period: %.8f' % period_[idx[0][0]], fontsize=10)
+                    #ax1.text(0.1,0.1,'Other bests: ' + str(0.5 * len(idx) - 1), fontsize=10)
+                    ax1.text(0.1,0.1,'RA, Dec: ' + str(coordinate), fontsize=10)
+                    ax2.plot(time_raw, flux_raw, color = 'silver')
+                    ax2.set_title(target_name + ' x = ' + str(l ) + ', y = ' + str(i ), fontsize = 15)
+                    ax2.set_ylabel('Background Subtracted Flux')
+                    ax2.set_xlabel('Time (TBJD)')
+                    ax2.plot(time_1d, flux_raw[index], ms = 2, marker = '.', c = 'C1', linestyle = '')
+                    ax3.imshow(firstImage, origin = 'lower', cmap = plt.cm.YlGnBu_r, vmax = np.percentile(firstImage, 98),
+                               vmin = np.percentile(firstImage, 5))
+                    ax3.grid(axis = 'both',color = 'white', ls = 'solid')
+                    ax3.imshow(bkgAperture[f'bkg_Aper_{first_sector}'],cmap=cmap)
+                    ax3.scatter(nearbyLoc[0:, 0], nearbyLoc[0:, 1], s = 200 / size, color = 'C1')
+                    ax3.set_xlim(-0.5,size - 0.5)
+                    ax3.set_ylim(-0.5,size - 0.5)
+                    ax3.set_xlabel('RA', fontsize = 12)
+                    ax3.set_ylabel('Dec', fontsize = 12)
+                    ax3.set_title('Sector ' + str(first_sector), fontsize = 15)
+                    ax3.scatter(l,i, marker = 's', s = 50000 / size ** 2, facecolors='none', edgecolors='r')
+                    ax4.errorbar(t_pf,flux_1d * mean, flux_err_1d, marker = '.', ms = 2, ls = '', elinewidth = 0.4, ecolor = 'silver', c = 'darkgrey', zorder = 1)
+                    ax4.plot(t,cnn_flux * mean, c = 'C1', lw = 0.8, zorder = 2)
+                    ax4.set_xlabel('Period = %.4f' % period_[idx[0][0]])
+                    ax4.set_ylabel('Detrended Phase Folded Flux')
+                    plt.savefig(location  + '[' + str(l) + ','+ str(i) + '] %.4f' %np.max(predict) + '.jpg', dpi = 100)
+                    data = Table([time_1d, flux_1d * mean, flux_err_1d, quality_1d], names=['TBJD', 'bkgsubflux', 'flux_err', 'quality'])
+                    ascii.write(data, location + 'TESS_' + str(target_name) + '[' + str(l) + ','+ str(i)+ '].dat', overwrite=True)
+                else:
+                    pass
+                bar.next()
 bar.finish()
 
 fig = plt.figure(constrained_layout = False, figsize=(8, 7))
 b = plt.imshow(Predict_max, origin = 'lower', cmap = 'bone', vmax = 1,vmin = np.percentile(Predict_max, 50), zorder = 1)
 plt.scatter(nearbyLoc[0:, 0], nearbyLoc[0:, 1], s = 200 / size, color = 'C1', zorder = 2)
-c = plt.axes([0.9, 0.12, 0.02, 0.75])
-cbar = plt.colorbar(b, cax = c)
+cbar = fig.colorbar(b)
 cbar.ax.tick_params(labelsize = 10)
-plt.set_xlim(-0.5,size - 0.5)
-plt.set_ylim(-0.5,size - 0.5)
-
+plt.title('CNN prediction colormap')
+plt.xlim(-0.5,size - 0.5)
+plt.ylim(-0.5,size - 0.5)
 plt.savefig(location  + 'Prediction_colormap.png', dpi = 100)
