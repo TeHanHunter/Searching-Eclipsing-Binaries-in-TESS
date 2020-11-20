@@ -60,7 +60,7 @@ Change the target and size of the cut to test it on any target. Note: Each TESS 
 * 10.24.2020: Removed low quality data and added flux error to the output file to be ready for an MCMC fit.
 * 10.31.2020: Optimized choice of periods, increasing the speed by a factor of 3. Added colormap of maximum predictions. Added two new cnn models, 'tess_cnn_sparse.h5' and 'tess_cnn_strict.h5'.
 * 11.7.2020: Added new program to test multiple sector data if the target is observed more than once. Tested on targets observed for 13 sectors (nearly a year long). Note: only possible on singular star target, searching for large FFI results in misalignment. 
-* 11.17.2020: The multiple sector search is now ready for full clusters. Uses WCS to align sectors, and check for out-of-edge pixels. In NGC 7654 (~ 1000 stars), the search identified about 10 possible EBs. 
+* 11.17.2020: The multiple sector search is now ready for full clusters. Use WCS to align sectors, and check for out-of-edge pixels. In NGC 7654 (~ 1000 stars), the search identified about 10 possible EBs. 
 
 ## Contributers
 
