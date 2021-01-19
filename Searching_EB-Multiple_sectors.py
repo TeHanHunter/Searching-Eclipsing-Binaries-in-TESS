@@ -341,7 +341,7 @@ for l in range(size):
                     #np.max(flux) - np.min(flux) np.percentile(flux, 100) - np.percentile(flux, 0)
                     flux /= (np.max(flux) - np.min(flux)) / 4
                     flux -= np.average(flux)
-                    predict[j][k] = np.array(cnn(np.ones(Sample_number).reshape((1, Sample_number, 1))))
+                    predict[j][k] = np.array(cnn(flux.reshape((1, Sample_number, 1))))
                 if np.max(predict) >= 0.99999:
                     break
             idx = np.where(predict == np.max(predict))
@@ -364,7 +364,7 @@ for l in range(size):
                         flux = f(t)
                         flux /= (np.max(flux) - np.min(flux)) / 4
                         flux -= np.average(flux)
-                        predict[j][k] = np.array(cnn(np.ones(Sample_number).reshape((1, Sample_number, 1))))
+                        predict[j][k] = np.array(cnn(flux.reshape((1, Sample_number, 1))))
 
                 idx = np.where(predict == np.max(predict))
                 p = period_[idx[0][0]]
