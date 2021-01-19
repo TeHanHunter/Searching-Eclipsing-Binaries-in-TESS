@@ -22,7 +22,6 @@ from wotan import flatten
 from astropy.wcs import WCS
 from astropy.io import fits
 from astropy.io import ascii
-from sklearn import preprocessing
 from astroquery.mast import Tesscut
 from progress.bar import ChargingBar
 from astroquery.mast import Catalogs
@@ -294,6 +293,9 @@ for l in range(size):
         time_raw = time_raw[index]
         flux_err_1d = flux_err_1d[index]
         quality_1d = np.ones(np.shape(time_raw))
+        data = Table([time_raw, flux_raw, flux_err_1d], names=['TBJD', 'bkgsubflux', 'flux_err'])
+        ascii.write(data, location + 'TESS_' + str(target_name) + '[' + str(l) + ','+ str(i)+ ']_no_detrending.dat', overwrite=True)
+        
         if min(flux_raw) < 0:
             bar.next()
             continue
@@ -339,7 +341,7 @@ for l in range(size):
                     #np.max(flux) - np.min(flux) np.percentile(flux, 100) - np.percentile(flux, 0)
                     flux /= (np.max(flux) - np.min(flux)) / 4
                     flux -= np.average(flux)
-                    predict[j][k] = cnn.predict(flux.reshape((1, Sample_number, 1)))
+                    predict[j][k] = np.array(cnn(np.ones(Sample_number).reshape((1, Sample_number, 1))))
                 if np.max(predict) >= 0.99999:
                     break
             idx = np.where(predict == np.max(predict))
@@ -362,7 +364,7 @@ for l in range(size):
                         flux = f(t)
                         flux /= (np.max(flux) - np.min(flux)) / 4
                         flux -= np.average(flux)
-                        predict[j][k] = cnn.predict(flux.reshape((1, Sample_number, 1)))
+                        predict[j][k] = np.array(cnn(np.ones(Sample_number).reshape((1, Sample_number, 1))))
 
                 idx = np.where(predict == np.max(predict))
                 p = period_[idx[0][0]]
