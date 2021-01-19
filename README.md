@@ -61,7 +61,7 @@ Change the target and size of the cut to test it on any target. Note: Each TESS 
 * 10.31.2020: Optimized choice of periods, increasing the speed by a factor of 3. Added colormap of maximum predictions. Added two new cnn models, 'tess_cnn_sparse.h5' and 'tess_cnn_strict.h5'.
 * 11.7.2020: Added new program to test multiple sector data if the target is observed more than once. Tested on targets observed for 13 sectors (nearly a year long). Note: only possible on singular star target, searching for large FFI results in misalignment. 
 * 11.17.2020: The multiple sector search is now ready for full clusters. Use WCS to align sectors, and check for out-of-edge pixels. In NGC 7654 (~ 1000 stars), the search identified about 10 possible EBs. 
-* 1.19.2021: Changed the core function of tensorflow `model.predict()` to `model()`. After the update to tensorflow 2.4, the former one is substantially slower. `model.predict()` takes ~ 25 ms and `model()` takes ~ 1.5 ms per prediction. 
+* 1.19.2021: Changed the cnn prediction function of tensorflow `model.predict()` to `model()`. After the update to tensorflow 2.4, the former one is substantially slower. `model.predict()` takes ~ 25 ms and `model()` takes ~ 1.5 ms per prediction. 
 
 ## Contributers
 
