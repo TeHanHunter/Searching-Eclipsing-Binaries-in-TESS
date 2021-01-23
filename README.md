@@ -21,7 +21,7 @@ This python script can be used to search for EBs in a cluster or any region of t
 
 Packages needed to run this script include
 ```
-pickle, tensorflow, sklearn, astroquery
+pickle, tensorflow, astroquery
 ```
 
 ### Installing
