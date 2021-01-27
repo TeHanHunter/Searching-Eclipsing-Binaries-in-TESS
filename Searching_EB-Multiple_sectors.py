@@ -7,7 +7,6 @@
 
 import os
 import sys
-import pickle
 import warnings
 if not sys.warnoptions:
     warnings.simplefilter("ignore")
@@ -16,18 +15,17 @@ import tensorflow
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+import matplotlib.patches as mpatches
 import matplotlib.gridspec as gridspec
 
 from tqdm import tqdm
 from wotan import flatten
 from astropy.wcs import WCS
-from astropy.io import fits
 from astropy.io import ascii
 from multiprocessing import Pool, Array
 from astroquery.mast import Tesscut
 from progress.bar import ChargingBar
 from astroquery.mast import Catalogs
-import matplotlib.patches as mpatches
 from scipy.interpolate import interp1d
 from astropy.coordinates import SkyCoord
 from tensorflow.keras.models import Model
@@ -37,7 +35,7 @@ from tensorflow.keras.layers import Input, Dense, Conv1D, AveragePooling1D, Conc
 colors = [(1,1,0.5,c) for c in np.linspace(0,1,100)]
 
 
-target_name = input('Target Identifier: ')
+target_name = input('Target Identifier or coordinate: ')
 FOV = input('FOV in arcmin (max 33) [Default: 5]: ') or '5'
 size = np.int(float(FOV) * 3)
 radSearch = size * 21 * 0.707 / 3600  #radius in degrees 
@@ -105,9 +103,11 @@ hdu1 = hdulist[0]
 firstImage = hdu1[1].data['FLUX'][0]
 wcs = WCS(hdu1[2].header)
 nearbyLoc = wcs.all_world2pix(nearbyStars[0:],0)
-print('Target pixel:', wcs.all_world2pix(np.array([float(target_name.split(' ')[0]),
-                                                   float(target_name.split(' ')[1])]).reshape((1,2)) , 0))
 
+try: 
+    print('Target pixel:', wcs.all_world2pix(np.array([float(target_name.split(' ')[0]),float(target_name.split(' ')[1])]).reshape((1,2)) , 0))
+except:
+    pass
 def aperture_phot(image, aperture):
     """
     Sum-up the pixels that are in the aperture for one image.
@@ -267,7 +267,7 @@ plt.legend(handles=[patch1, patch2, patch3, patch4, patch5], bbox_to_anchor=(0.9
 plt.savefig(location  + 'Picked Periods.png', dpi = 300)
 
 file = open(location + target_name + '.txt', 'w') 
-file.write('Target Identifier:' + target_name + '\n' +
+file.write('Target Identifier or coordinate:' + target_name + '\n' +
            'FOV in arcmin (max 33) [Default: 5]:' + FOV + '\n' +
            'Trained cnn .h5 file [Default: tess_cnn.h5]:' + cnn_weights + '\n' +
            'Threshold [Default: 0.95]:' + quality + '\n' +
