@@ -23,7 +23,7 @@ from wotan import flatten
 from astropy.wcs import WCS
 from astropy.io import fits
 from astropy.io import ascii
-from multiprocessing import Pool
+from multiprocessing import Pool, Array
 from astroquery.mast import Tesscut
 from progress.bar import ChargingBar
 from astroquery.mast import Catalogs
@@ -105,6 +105,8 @@ hdu1 = hdulist[0]
 firstImage = hdu1[1].data['FLUX'][0]
 wcs = WCS(hdu1[2].header)
 nearbyLoc = wcs.all_world2pix(nearbyStars[0:],0)
+print('Target pixel:', wcs.all_world2pix(np.array([float(target_name.split(' ')[0]),
+                                                   float(target_name.split(' ')[1])]).reshape((1,2)) , 0))
 
 def aperture_phot(image, aperture):
     """
@@ -165,7 +167,7 @@ for i, sector in enumerate(sectorTable['sector']):
     bkgAperture[f'bkg_Aper_{sector}'] = bkgAperture_
 first_sector = sectorTable['sector'][0]
 
-Predict_max = np.zeros((size, size))
+Predict_max = Array('i' , np.zeros(size ** 2, dtype = np.int8))
 print('Please choose a threshold to save a figure. This number is the prediction given by cnn, \
 indicating the likelihood of including eclipsing binaries in a light curve. 0 is the lowest (keeping every pixel), and 1 is the highest (maybe excluding everything).')
 quality = input('Threshold [Default: 0.95]: ') or '0.95'
@@ -275,6 +277,7 @@ file.close()
 
 ###Start CNN
 def cnn_prediction(coord):
+    global Predict_max
     x = int(coord[0])
     y = int(coord[1])
     time_raw = data_time['time_'+ str(first_sector)]
@@ -295,8 +298,8 @@ def cnn_prediction(coord):
     time_raw = time_raw[index]
     flux_err_1d = flux_err_1d[index]
     quality_1d = np.ones(np.shape(time_raw))
-    data = Table([time_raw, flux_raw, flux_err_1d], names=['TBJD', 'bkgsubflux', 'flux_err'])
-    ascii.write(data, location + 'TESS_' + str(target_name) + '[' + str(x) + ','+ str(y)+ ']_no_detrending.dat', overwrite=True)
+    # data = Table([time_raw, flux_raw, flux_err_1d], names=['TBJD', 'bkgsubflux', 'flux_err'])
+    # ascii.write(data, location + 'TESS_' + str(target_name) + '[' + str(x) + ','+ str(y)+ ']_no_detrending.dat', overwrite=True)
 
     if min(flux_raw) < 0:
         pass
@@ -369,7 +372,7 @@ def cnn_prediction(coord):
             #cnn_flux -= np.average(cnn_flux)
             ###
 
-            Predict_max[y,x] = np.max(predict)
+            Predict_max[x * size + y] = int(np.max(predict) * 100)
             #plot
             if np.max(predict) >= float(quality):
                 fig = plt.figure(constrained_layout = False, figsize=(15, 7))
@@ -390,7 +393,7 @@ def cnn_prediction(coord):
                 ax2.set_title(target_name + ' x = ' + str(x ) + ', y = ' + str(y ), fontsize = 15)
                 ax2.set_ylabel('Background Subtracted Flux')
                 ax2.set_xlabel('Time (TBJD)')
-                ax2.plot(time_1d, flux_raw[index], ms = 2, marker = '.', c = 'C1', linestyle = '')
+                ax2.plot(time_1d, flux_raw[index], ms = 0.5, marker = '.', c = 'C1', linestyle = '')
                 ax3.imshow(firstImage, origin = 'lower', cmap = plt.cm.YlGnBu_r, vmax = np.percentile(firstImage, 98),
                            vmin = np.percentile(firstImage, 5))
                 ax3.grid(axis = 'both',color = 'white', ls = 'solid')
@@ -424,8 +427,9 @@ for _ in tqdm(pool.imap_unordered(cnn_prediction, pos), total = len(pos)):
     pass
 pool.close()
 
+Predict_max = np.array(Predict_max).reshape((size,size))/100
 fig = plt.figure(constrained_layout = False, figsize=(8, 7))
-b = plt.imshow(Predict_max, origin = 'lower', cmap = 'bone', vmax = 1,vmin = np.percentile(Predict_max, 50), zorder = 1)
+b = plt.imshow(Predict_max, origin = 'lower', cmap = 'bone', vmax = 1,vmin = 0.8, zorder = 1)
 plt.scatter(nearbyLoc[0:, 0], nearbyLoc[0:, 1], s = 200 / size, color = 'C1', zorder = 2)
 cbar = fig.colorbar(b)
 cbar.ax.tick_params(labelsize = 10)
