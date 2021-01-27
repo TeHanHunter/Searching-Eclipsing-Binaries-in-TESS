@@ -15,41 +15,43 @@ This star in the cluster NGC 7654 was observed in 2 sectors and have data spanni
 
 ## Getting Started
 
-This python script can be used to search for EBs in a cluster or any region of the sky covered by TESS. It returns a graph and .dat document for each pixel, which include information about the CNN prediction on the light curve of the pixel. 
+This python script can be used to search for EBs in a cluster or any region of the sky covered by TESS. It returns a graph and .dat document for each pixel, selected by the CNN prediction on the light curve of each pixel. 
 
 ### Prerequisites
 
 Packages needed to run this script include
 ```
-pickle, tensorflow, astroquery
+tensorflow, astroquery
 ```
 
 ### Installing
 After installing required packages, clone the master folder and run Searching_EB-Command_line.py on a command line. Locate tess_cnn.h5 file in CNN Training folder and you can start using it!
 
 ## Running the Search
-The script askes for several parameters and saves figures and data that are selected by these parameters. The time taken for each pixel is roughly 6 seconds on my pc. Below is an example for the open cluster Trumpler 5. This is a 5184 pixel cut, and it took approximately 8.5 hours in a test run. 
-
-Note: Now the speed is improved to ~ 1.4s per pixel. 
+The script askes for several parameters and saves figures and data that are selected by these parameters. This run on a region of NGC 7654 takes less than 2 mins for 125 pixels. 
 
 ```
-Target Identifier: Trumpler 5
-FOV in arcmin (max 33) [Default: 5]: 24
-Trained cnn .h5 file [Default: tess_cnn.h5]:
+Target Identifier: 351.40691109875326 61.64665740896054
+FOV in arcmin (max 33) [Default: 5]:
+Trained cnn .h5 file [Default: tess_cnn.h5]: /mnt/c/users/tehan/documents/TESS/TESS_cut/tess_cnn.h5
 #################################
   sectorName   sector camera ccd
 -------------- ------ ------ ---
-tess-s0006-1-3      6      1   3
+tess-s0017-3-2     17      3   2
+tess-s0018-3-1     18      3   1
+tess-s0024-4-3     24      4   3
 #################################
+Downloading FFI ...
+Target pixel: [[7.64090187 7.50105355]]
 Please choose a threshold to save a figure. This number is the prediction given by cnn, indicating the likelihood of including eclipsing binaries in a light curve. 0 is the lowest (keeping every pixel), and 1 is the highest (maybe excluding everything).
-Threshold [Default: 0.95]: 0.99
-Saving figures to [Default: root]: /mnt/c/users/tehan/desktop/Trumpler 10.23/
-Sampling Best Trial Periods:  ████████████████████████████████ 100.0% Elapsed: 62s Remaining: 0s
+Threshold [Default: 0.95]:
+Saving figures to [Default: root]: /mnt/c/users/tehan/desktop/Check/
+Sampling Best Trial Periods:  ████████████████████████████████ 100.0% Elapsed: 9s Remaining: 0s
 Now look at the produced image showing period vs standard deviation of time intervals. Choose a threshold to draw test periods from. The data would be better spaced if the threshold is smaller, but notice to make sure there are nearby available periods from 0 to 10 days.
-Threshold of time interval standard deviation [Default 0.0006]: 0.00045
-Finished pixels:  ████████████████████████████████ 100.0% Elapsed: 31102s Remaining: 0s
+Threshold of time interval standard deviation [Default 0.0005]:
+100%|█████████████████████████████████████████████████████████████████████████████████| 225/225 [01:45<00:00,  2.13it/s]
 ```
-Change the target and size of the cut to test it on any target. Note: Each TESS pixel is about 21 arcsec wide.
+Note: Each TESS pixel is about 21 arcsec wide.
 
 ## Log
 * 8.24.2020: Created Rrepository, uploaded CNN training and Searching EBs folder.
@@ -62,8 +64,8 @@ Change the target and size of the cut to test it on any target. Note: Each TESS 
 * 11.7.2020: Added new program to test multiple sector data if the target is observed more than once. Tested on targets observed for 13 sectors (nearly a year long). Note: only possible on singular star target, searching for large FFI results in misalignment. 
 * 11.17.2020: The multiple sector search is now ready for full clusters. Use WCS to align sectors, and check for out-of-edge pixels. In NGC 7654 (~ 1000 stars), the search identified about 10 possible EBs. 
 * 1.19.2021: Changed the cnn prediction function of tensorflow `model.predict()` to `model()`. After the update to tensorflow 2.4, the former one is substantially slower. `model.predict()` takes ~ 25 ms and `model()` takes ~ 1.5 ms per prediction. Also, the output now includes raw light curves of each pixel before detrending. 
-* 1.23.2021: Multiprocessing available. The speed is improved by 3.5x in a 6-core Xeon E-2176M CPU. Also, the output gives all light curves before detrending for each pixel.
-
+* 1.23.2021: Multiprocessing available. The speed is improved by 3.5x on a 6-core Xeon E-2176M CPU. Also, the output gives all light curves before detrending for each pixel.
+* 1.27.2021: Fixed blank Prediction_colormaps. The search also takes RA and Dec as input now, returning the cooresponding pixel coordinate. 
 ## Contributers
 
 * **Te Han** 
