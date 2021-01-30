@@ -30,7 +30,7 @@ from scipy.interpolate import interp1d
 from astropy.coordinates import SkyCoord
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import SGD
-from astropy.table import Table, Column, MaskedColumn
+from astropy.table import Table, Column, MaskedColumn, hstack
 from tensorflow.keras.layers import Input, Dense, Conv1D, AveragePooling1D, Concatenate, Flatten, Dropout
 colors = [(1,1,0.5,c) for c in np.linspace(0,1,100)]
 
@@ -104,10 +104,6 @@ firstImage = hdu1[1].data['FLUX'][0]
 wcs = WCS(hdu1[2].header)
 nearbyLoc = wcs.all_world2pix(nearbyStars[0:],0)
 
-try: 
-    print('Target pixel:', wcs.all_world2pix(np.array([float(target_name.split(' ')[0]),float(target_name.split(' ')[1])]).reshape((1,2)) , 0))
-except:
-    pass
 def aperture_phot(image, aperture):
     """
     Sum-up the pixels that are in the aperture for one image.
@@ -174,6 +170,25 @@ quality = input('Threshold [Default: 0.95]: ') or '0.95'
 location = input('Saving figures to [Default: root]: ')
 mylist = np.arange(size ** 2)
 
+print('Locating Gaia objects...')
+catalogData = Catalogs.query_object(target_name, radius = 0.05833333333, catalog="Gaia") # 5 pixel radius
+catalogData.sort("phot_g_mean_mag")
+gaia_targets = catalogData['designation', 'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag' , 'ra', 'dec']
+
+
+for i, sector in enumerate(sectorTable['sector']):
+    x = np.zeros(len(gaia_targets))
+    y = np.zeros(len(gaia_targets))
+    for j, designation in enumerate(gaia_targets['designation']):
+        pixel = wcs_projection[f'wcs_{sector}'].all_world2pix(np.array([gaia_targets['ra'][j],gaia_targets['dec'][j]]).reshape((1,2)) , 0)
+        x[j] = pixel[0][0]
+        y[j] = pixel[0][1]
+    t = Table()
+    t[f'Sector_{sector}_x'] = x
+    t[f'Sector_{sector}_y'] = y
+    gaia_targets = hstack([gaia_targets,t])
+
+ascii.write(gaia_targets, location + 'gaia_targets.dat', overwrite=True)
 
 #first_trial = int(input('Period Density [Default: 200]: ') or '200'
 first_trial = 200
