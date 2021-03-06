@@ -66,6 +66,7 @@ Note: Each TESS pixel is about 21 arcsec wide.
 * 1.19.2021: Changed the cnn prediction function of tensorflow `model.predict()` to `model()`. After the update to tensorflow 2.4, the former one is substantially slower. `model.predict()` takes ~ 25 ms and `model()` takes ~ 1.5 ms per prediction. Also, the output now includes raw light curves of each pixel before detrending. 
 * 1.23.2021: Multiprocessing available. The speed is improved by 3.5x on a 6-core Xeon E-2176M CPU. Also, the output gives all light curves before detrending for each pixel.
 * 1.27.2021: Fixed blank Prediction_colormaps. The search also takes RA and Dec as input now, returning the cooresponding pixel coordinate. 
+* 1.30.2021: Now the output includes a Gaia catalog search table with the coordinates converted to each sector's pixel position. This is preparing for a PSF approach to remove contamination from other sources.  
 ## Contributers
 
 * **Te Han** 
