@@ -1,4 +1,5 @@
-# Searching-Eclipsing-Binaries-in-TESS
+# SEBIT
+### Searching-Eclipsing-Binaries-in-TESS
 Using the TESS 30-min interval full frame images, this code searches for eclipsing binaries with convolutional neural network (CNN). With `Batman`, the code produces pseudo light curves of EBs and trains a CNN model with them. This model is then used on each pixel of full frame images produced by TESScut. The output includes all light curves with high value cnn predictions above an arbitrary threshold. The image below is a sample result. 
 
 <!-- <img src=https://user-images.githubusercontent.com/49893001/97091618-0a0fab00-15f2-11eb-926e-097c558bb119.png width = '1024'> -->
