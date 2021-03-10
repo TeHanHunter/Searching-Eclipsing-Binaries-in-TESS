@@ -1,23 +1,12 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# # Section 4: CNN on TESS
-
-# In[1]:
-
 import os
 import sys
 import warnings
-if not sys.warnoptions:
-    warnings.simplefilter("ignore")
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
 import matplotlib.gridspec as gridspec
-
 from tqdm import tqdm
 from wotan import flatten
 from astropy.wcs import WCS
@@ -33,7 +22,9 @@ from tensorflow.keras.optimizers import SGD
 from astropy.table import Table, Column, MaskedColumn, hstack
 from tensorflow.keras.layers import Input, Dense, Conv1D, AveragePooling1D, Concatenate, Flatten, Dropout
 colors = [(1,1,0.5,c) for c in np.linspace(0,1,100)]
-
+if not sys.warnoptions:
+    warnings.simplefilter("ignore")
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 target_name = input('Target Identifier or coordinate: ')
 FOV = input('FOV in arcmin (max 33) [Default: 5]: ') or '5'
