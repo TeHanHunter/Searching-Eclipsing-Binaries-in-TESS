@@ -1,0 +1,77 @@
+# SEBIT
+### Searching-Eclipsing-Binaries-in-TESS
+Using the TESS 30-min interval full frame images, this code searches for eclipsing binaries with convolutional neural network (CNN). With `Batman`, the code produces pseudo light curves of EBs and trains a CNN model with them. This model is then used on each pixel of full frame images produced by TESScut. The output includes all light curves with high value cnn predictions above an arbitrary threshold. The image below is a sample result. 
+
+<!-- <img src=https://user-images.githubusercontent.com/49893001/97091618-0a0fab00-15f2-11eb-926e-097c558bb119.png width = '1024'> -->
+![10,60  1 0000](https://user-images.githubusercontent.com/49893001/97091618-0a0fab00-15f2-11eb-926e-097c558bb119.png)
+The periods to test cnn on is carefully chosen to avoid huge time intervals between adjacent data points, which make interpolation do a poor job. The below image shows the difference of standard deviation of time intervals between a blunt choice (geometric series) and a modified choice (slightly different from geometric series, but reduce the stdv below a threshold).
+
+<p align="center">
+  <img src=https://user-images.githubusercontent.com/49893001/95634538-02bb9f80-0a3f-11eb-981f-d2c16084ec94.png width = '768'>
+</p>
+
+This star in the cluster NGC 7654 was observed in 2 sectors and have data spanning nearly half a year. The code finds a period with much higher precision.
+![5,19  1 0000](https://user-images.githubusercontent.com/49893001/99491939-8790b780-2921-11eb-87c3-0899ab9a777d.jpg)
+
+
+## Getting Started
+
+This python script can be used to search for EBs in a cluster or any region of the sky covered by TESS. It returns a graph and .dat document for each pixel, selected by the CNN prediction on the light curve of each pixel. 
+
+### Prerequisites
+
+Packages needed to run this script include
+```
+tensorflow, astroquery
+```
+
+### Installing
+After installing required packages, clone the master folder and run Searching_EB-Command_line.py on a command line. Locate tess_cnn.h5 file in CNN Training folder and you can start using it!
+
+## Running the Search
+The script askes for several parameters and saves figures and data that are selected by these parameters. This run on a region of NGC 7654 takes less than 2 mins for 125 pixels. 
+
+```
+Target Identifier: 351.40691109875326 61.64665740896054
+FOV in arcmin (max 33) [Default: 5]:
+Trained cnn .h5 file [Default: tess_cnn.h5]: /mnt/c/users/tehan/documents/TESS/TESS_cut/tess_cnn.h5
+#################################
+  sectorName   sector camera ccd
+-------------- ------ ------ ---
+tess-s0017-3-2     17      3   2
+tess-s0018-3-1     18      3   1
+tess-s0024-4-3     24      4   3
+#################################
+Downloading FFI ...
+Target pixel: [[7.64090187 7.50105355]]
+Please choose a threshold to save a figure. This number is the prediction given by cnn, indicating the likelihood of including eclipsing binaries in a light curve. 0 is the lowest (keeping every pixel), and 1 is the highest (maybe excluding everything).
+Threshold [Default: 0.95]:
+Saving figures to [Default: root]: /mnt/c/users/tehan/desktop/Check/
+Sampling Best Trial Periods:  ████████████████████████████████ 100.0% Elapsed: 9s Remaining: 0s
+Now look at the produced image showing period vs standard deviation of time intervals. Choose a threshold to draw test periods from. The data would be better spaced if the threshold is smaller, but notice to make sure there are nearby available periods from 0 to 10 days.
+Threshold of time interval standard deviation [Default 0.0005]:
+100%|█████████████████████████████████████████████████████████████████████████████████| 225/225 [01:45<00:00,  2.13it/s]
+```
+Note: Each TESS pixel is about 21 arcsec wide.
+
+## Log
+* 8.24.2020: Created Rrepository, uploaded CNN training and Searching EBs folder.
+* 8.29.2020: Created .py file to be run in the command line.
+* 9.15.2020: Added detrending function (Wotan).
+* 9.26.2020: Updated cnn model (tess_cnn_weights.h5) by using real light curves of TESS.
+* 10.9.2020: Modified periods to test cnn to avoid big time intervals between phase folded data. This inproves the performance of cnn by reducing continuous same value after interpolation. Also validates a cnn with 500 points is a reasonable limit (limiting stdv of interval/period ~ 0.0006). 
+* 10.24.2020: Removed low quality data and added flux error to the output file to be ready for an MCMC fit.
+* 10.31.2020: Optimized choice of periods, increasing the speed by a factor of 3. Added colormap of maximum predictions. Added two new cnn models, 'tess_cnn_sparse.h5' and 'tess_cnn_strict.h5'.
+* 11.7.2020: Added new program to test multiple sector data if the target is observed more than once. Tested on targets observed for 13 sectors (nearly a year long). Note: only possible on singular star target, searching for large FFI results in misalignment. 
+* 11.17.2020: The multiple sector search is now ready for full clusters. Use WCS to align sectors, and check for out-of-edge pixels. In NGC 7654 (~ 1000 stars), the search identified about 10 possible EBs. 
+* 1.19.2021: Changed the cnn prediction function of tensorflow `model.predict()` to `model()`. After the update to tensorflow 2.4, the former one is substantially slower. `model.predict()` takes ~ 25 ms and `model()` takes ~ 1.5 ms per prediction. Also, the output now includes raw light curves of each pixel before detrending. 
+* 1.23.2021: Multiprocessing available. The speed is improved by 3.5x on a 6-core Xeon E-2176M CPU. Also, the output gives all light curves before detrending for each pixel.
+* 1.27.2021: Fixed blank Prediction_colormaps. The search also takes RA and Dec as input now, returning the cooresponding pixel coordinate. 
+* 1.30.2021: Now the output includes a Gaia catalog search table with the coordinates converted to each sector's pixel position. This is preparing for a PSF approach to remove contamination from other sources.  
+## Contributers
+
+* **Te Han** 
+* **Timothy D Brandt** 
+
+## License
+ ...
