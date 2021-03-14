@@ -1,27 +1,12 @@
 import os
 import sys
 import warnings
-import tensorflow
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-import matplotlib.patches as mpatches
-import matplotlib.gridspec as gridspec
-from tqdm import tqdm
-from wotan import flatten
 from astropy.wcs import WCS
-from astropy.io import ascii
-from multiprocessing import Pool, Array
 from astroquery.mast import Tesscut
-from progress.bar import ChargingBar
 from astroquery.mast import Catalogs
-from scipy.interpolate import interp1d
 from astropy.coordinates import SkyCoord
-from tensorflow.keras.models import Model
-from tensorflow.keras.optimizers import SGD
-from tqdm.contrib.concurrent import process_map
-from astropy.table import Table, Column, MaskedColumn, hstack
-from tensorflow.keras.layers import Input, Dense, Conv1D, AveragePooling1D, Concatenate, Flatten, Dropout
+from astropy.table import Table, hstack
 
 if not sys.warnoptions:
     warnings.simplefilter("ignore")
@@ -96,6 +81,5 @@ class Source(object):
         else:
             self.gaia = None
 
-
-if __name__ == '__main__':
-    target = Source(name='NGC 7654', size=40)
+# if __name__ == '__main__':
+#     target = Source(name='NGC 7654', size=40)
