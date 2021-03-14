@@ -98,4 +98,4 @@ class Source(object):
 
 
 if __name__ == '__main__':
-    target = Source(name='NGC 7654', size=99)
+    target = Source(name='NGC 7654', size=40)
