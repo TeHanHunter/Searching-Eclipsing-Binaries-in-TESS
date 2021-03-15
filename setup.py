@@ -5,7 +5,7 @@ sys.path.insert(0, "SEBIT")
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 setuptools.setup(
-    name="SEBIT",  # Replace with your own username
+    name="SEBIT",
     version="0.0.1",
     author="Te Han",
     author_email="tehanhunter@gmail.com",
@@ -18,7 +18,6 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    package_dir={"": "SEBIT"},
-    packages=setuptools.find_packages(where="SEBIT"),
+    packages=setuptools.find_packages(include=['SEBIT', 'SEBIT.*']),
     python_requires=">=3.6",
 )
