@@ -28,13 +28,21 @@ class Source(object):
         The sector for which data should be returned. If None, returns the first observed sector
     search_gaia : boolean, optional
         Whether to search gaia targets in the field
+    nstars : int
+        Number of stars of interest, cut by a magnitude threshold
 
     """
+    # variable parameters
+    nstars = None
+    star_idx = [0]
+    cguess = [0, 0, 1, 0, 1, 2]
+    var_to_bounds = [(-0.5, 0.5), (-0.5, 0.5), (0, 10.0), (-0.5, 0.5), (0, 10.0), (1, np.inf)]
 
     def __init__(self, name, size=15, sector=None, search_gaia=True):
         super(Source, self).__init__()
         self.name = name
         self.size = size
+        self.z = np.arange(self.size ** 2)
         catalog = Catalogs.query_object(self.name, radius=self.size * 21 * 0.707 / 3600, catalog="TIC")
         ra = catalog[0]['ra']
         dec = catalog[0]['dec']
@@ -73,13 +81,48 @@ class Source(object):
                     np.array([gaia_targets['ra'][j], gaia_targets['dec'][j]]).reshape((1, 2)), 0)
                 x[j] = pixel[0][0]
                 y[j] = pixel[0][1]
+
+            tess_mag = np.zeros(len(gaia_targets))
+            for i, designation in enumerate(gaia_targets['designation']):
+                dif = gaia_targets['phot_bp_mean_mag'][i] - gaia_targets['phot_rp_mean_mag'][i]
+                tess_mag[i] = gaia_targets['phot_g_mean_mag'][
+                                  i] - 0.00522555 * dif ** 3 + 0.0891337 * dif ** 2 - 0.633923 * dif + 0.0324473
+                if np.isnan(tess_mag[i]):
+                    tess_mag[i] = gaia_targets['phot_g_mean_mag'][i] - 0.430
+            tess_flux = 10 ** (- tess_mag / 2.5)
             t = Table()
+            t[f'tess_mag'] = tess_mag
+            t[f'tess_flux'] = tess_flux
+            t[f'tess_flux_ratio'] = tess_flux / np.max(tess_flux)
             t[f'Sector_{self.sector}_x'] = x
             t[f'Sector_{self.sector}_y'] = y
             gaia_targets = hstack([gaia_targets, t])
+            gaia_targets.sort('tess_mag')
             self.gaia = gaia_targets
         else:
             self.gaia = None
 
-# if __name__ == '__main__':
-#     target = Source(name='NGC 7654', size=40)
+    def threshold(self, star_idx, mag_diff=5):
+        """
+        Choose stars of interest (primarily for PSF fitting
+
+        Attributes
+        ----------
+        star_idx : list or str
+            Star indexes for PSF fitting, list indexes or 'all'
+        mag_diff
+        """
+        nstars = np.where(self.gaia['phot_g_mean_mag'] < (min(self.gaia['phot_g_mean_mag']) + mag_diff))[0][-1]
+        self.nstars = nstars
+        if star_idx == 'all':
+            self.star_idx = np.arange(self.nstars)
+        elif star_idx == 'none':
+            self.star_idx = np.array([], dtype=int)
+        elif type(star_idx) == list and all(isinstance(n, int) for n in star_idx):
+            self.star_idx = np.array(star_idx)
+        else:
+            raise TypeError("Star index (star_idx) type should be a list of ints or 'all'. ")
+
+
+if __name__ == '__main__':
+    target = Source('NGC 7654')
