@@ -40,7 +40,7 @@ def contamination(lin_pars, c, source):
                 np.array(source.gaia['Sector_{}_x'.format(source.sector)])[i] + c[0],
                 np.array(source.gaia['Sector_{}_y'.format(source.sector)])[i] + c[1], c[2], c[3], c[4],
                 c[5], source.size).reshape((source.size, source.size))
-    return flux + lin_pars[0] * np.ones((15, 15))
+    return flux + lin_pars[0] * np.ones((source.size, source.size))
 
 
 def moffat_model(c, flux, source):  # size, nstars, idx, flux_ratio, x_shift, y_shift
