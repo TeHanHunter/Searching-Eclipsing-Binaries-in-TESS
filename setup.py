@@ -1,6 +1,6 @@
 import sys
 import setuptools
-from version import __version__
+from SEBIT.version import __version__
 
 sys.path.insert(0, "SEBIT")
 with open("README.md", "r", encoding="utf-8") as fh:
