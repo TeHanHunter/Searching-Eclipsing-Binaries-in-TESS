@@ -3,6 +3,7 @@ from SEBIT.psf import *
 from SEBIT.cnn import *
 from SEBIT.visual import *
 
+
 def search(name, size=15):
     size = int(size)
     if type(name) != str:
@@ -13,6 +14,7 @@ def search(name, size=15):
 
     # First fit --> get nonlinear parameters of moffat
     target.threshold('none')
+    psf_result = psf(-1,target)
 
     return target
 

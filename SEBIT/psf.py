@@ -79,13 +79,13 @@ def moffat_model(c, flux, source):  # size, nstars, idx, flux_ratio, x_shift, y_
     return result
 
 
-def psf(num, source):
+def psf(num, source, cfit=None):
     if num == -1:
         flux = (np.sum(source.flux, axis=0) / len(source.flux)).reshape(source.size ** 2)
+        cfit = cfit
     else:
         flux = source.flux[num].reshape(source.size ** 2)
-    cfit = optimize.minimize(chisq_model, source.cguess, (moffat_model, flux, source), method="Powell",
-                             bounds=source.var_to_bounds).x
+        cfit = optimize.minimize(chisq_model, source.cguess, (moffat_model, flux, source), method="Powell", bounds=source.var_to_bounds).x
     c_result = moffat_model(cfit, flux, source)
     aperture = source.flux[num] - contamination(c_result.par, cfit, source)
     r = PsfResult()

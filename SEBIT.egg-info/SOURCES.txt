@@ -1,10 +1,12 @@
 README.md
 setup.py
 SEBIT/__init__.py
+SEBIT/cnn.py
 SEBIT/main.py
 SEBIT/psf.py
 SEBIT/source.py
 SEBIT/version.py
+SEBIT/visual.py
 SEBIT.egg-info/PKG-INFO
 SEBIT.egg-info/SOURCES.txt
 SEBIT.egg-info/dependency_links.txt
