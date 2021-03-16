@@ -80,7 +80,10 @@ def moffat_model(c, flux, source):  # size, nstars, idx, flux_ratio, x_shift, y_
 
 
 def psf(num, source):
-    flux = source.flux[num].reshape(source.size ** 2)
+    if num == -1:
+        flux = (np.sum(source.flux, axis=0) / len(source.flux)).reshape(source.size ** 2)
+    else:
+        flux = source.flux[num].reshape(source.size ** 2)
     cfit = optimize.minimize(chisq_model, source.cguess, (moffat_model, flux, source), method="Powell",
                              bounds=source.var_to_bounds).x
     c_result = moffat_model(cfit, flux, source)
