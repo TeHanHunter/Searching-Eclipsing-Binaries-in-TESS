@@ -22,8 +22,8 @@ def chisq_model(par, model, flux, source):
     return np.sum((model(par, flux, source).y - flux) ** 2)
 
 
-def moffat(x_, y_, a, b, c, beta):
-    x, y = np.meshgrid(np.linspace(0, 14, 15), np.linspace(0, 14, 15))
+def moffat(x_, y_, a, b, c, beta, size):
+    x, y = np.meshgrid(np.linspace(0, size - 1, size), np.linspace(0, size - 1, size))
     x -= x_
     y -= y_
     g = (1 + (a * x ** 2 + 2 * b * x * y + c * y ** 2)) ** (- beta)
@@ -39,7 +39,7 @@ def contamination(lin_pars, c, source):
             flux += lin_pars[1] * np.array(source.gaia['tess_flux_ratio'])[i] * moffat(
                 np.array(source.gaia['Sector_{}_x'.format(source.sector)])[i] + c[0],
                 np.array(source.gaia['Sector_{}_y'.format(source.sector)])[i] + c[1], c[2], c[3], c[4],
-                c[5]).reshape((source.size, source.size))
+                c[5], source.size).reshape((source.size, source.size))
     return flux + lin_pars[0] * np.ones((15, 15))
 
 
@@ -56,12 +56,12 @@ def moffat_model(c, flux, source):  # size, nstars, idx, flux_ratio, x_shift, y_
             flux_conta += np.array(source.gaia['tess_flux_ratio'])[i] * moffat(
                 np.array(source.gaia['Sector_{}_x'.format(source.sector)])[i] + c[0],
                 np.array(source.gaia['Sector_{}_y'.format(source.sector)])[i] + c[1], c[2], c[3], c[4],
-                c[5]).reshape(source.size ** 2)
+                c[5], source.size).reshape(source.size ** 2)
     A[:, 1] = flux_conta  # A
     for j, index in enumerate(source.star_idx):
         A[:, j + 2] = moffat(np.array(source.gaia['Sector_{}_x'.format(source.sector)])[index] + c[0],
                              np.array(source.gaia['Sector_{}_y'.format(source.sector)])[index] + c[1],
-                             c[2], c[3], c[4], c[5]).reshape(source.size ** 2)  # F_ebs
+                             c[2], c[3], c[4], c[5], source.size).reshape(source.size ** 2)  # F_ebs
 
     result = Linmodel()
     if np.isnan(np.sum(A)):
