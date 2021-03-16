@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/Searching-Eclipsing-Binaries-with-TESS.iml" filepath="$PROJECT_DIR$/.idea/Searching-Eclipsing-Binaries-with-TESS.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/Searching-Eclipsing-Binaries-in-TESS.iml" filepath="$PROJECT_DIR$/.idea/Searching-Eclipsing-Binaries-in-TESS.iml" />
     </modules>
   </component>
 </project>
