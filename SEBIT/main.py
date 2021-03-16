@@ -1,6 +1,7 @@
-if __name__ == '__main__':
-    print('asda')
-    print('asda')
+from SEBIT.source import *
+from SEBIT.psf import *
 
-    print('asda')
-    print('asdasda')
+if __name__ == '__main__':
+    target = Source('NGC 7654')
+    target.threshold('none')
+    r = psf(0, target)

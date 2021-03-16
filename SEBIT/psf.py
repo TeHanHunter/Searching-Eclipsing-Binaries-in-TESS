@@ -10,6 +10,14 @@ class Linmodel:
         self.cov_inv = None
 
 
+class PsfResult(object):
+    def __init__(self):
+        self.linparam = None
+        self.nonlinparam = None
+        self.time = None
+        self.result = None
+
+
 def chisq_model(par, model, flux, source):
     return np.sum((model(par, flux, source).y - flux) ** 2)
 
@@ -77,8 +85,9 @@ def psf(num, source):
                              bounds=source.var_to_bounds).x
     c_result = moffat_model(cfit, flux, source)
     aperture = source.flux[num] - contamination(c_result.par, cfit, source)
-    r = list(c_result.par)
-    r.extend(list(cfit))
-    r.append(source.time[num])
-    r.append(aperture)
+    r = PsfResult()
+    r.linparam = list(c_result.par)
+    r.nonlinparam = list(cfit)
+    r.time = source.time[num]
+    r.result = aperture
     return r
