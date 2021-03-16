@@ -1,12 +1,13 @@
 import sys
 import setuptools
+from version import __version__
 
 sys.path.insert(0, "SEBIT")
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 setuptools.setup(
     name="SEBIT",
-    version="0.0.1",
+    version=__version__,
     author="Te Han",
     author_email="tehanhunter@gmail.com",
     description="Searching Eclipsing Binaries in TESS",
