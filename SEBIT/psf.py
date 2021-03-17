@@ -3,14 +3,37 @@ from scipy import optimize
 
 
 class Linmodel:
+    """
+    Linear model with parameters
+
+    Attributes
+    ----------
+    par : list
+        List of parameters
+    y : list
+        List of function output
+    """
+
     def __init__(self):
         self.par = None
         self.y = None
-        self.cov = None
-        self.cov_inv = None
 
 
 class PsfResult(object):
+    """
+    Saving results of PSF
+
+    Attributes
+    ----------
+    linparam : list
+        List of linear parameters
+    nonlinparam : list
+        List of nonlinear parameters
+    time : float
+        Time of this frame
+    result : numpy.ndarray (2d)
+        Array of contamination removed FFI
+    """
     def __init__(self):
         self.linparam = None
         self.nonlinparam = None
@@ -19,10 +42,42 @@ class PsfResult(object):
 
 
 def chisq_model(par, model, flux, source):
+    """
+    Chi-square model for linear minimization
+
+    Parameters
+    ----------
+    par : list
+        List of parameters
+    model : fn
+        Function of the model used (moffat)
+    flux : numpy.ndarray (2d)
+        Fluxes of this frame
+    source : SEBIT.source.Source class
+        Source class object with data
+    """
     return np.sum((model(par, flux, source).y - flux) ** 2)
 
 
 def moffat(x_, y_, a, b, c, beta, size):
+    """
+    Moffat model of one star at certain location of the frame
+
+    Parameters
+    ----------
+    x_ : float
+        x pixel location of the star
+    y_ : float
+        y pixel location of the star
+    a : float
+        Coefficient of x^2 term
+    b : float
+        Coefficient of 2xy term
+    c : float
+        Coefficient of y^2 term
+    beta : float
+        Power of moffat model (positive, negative sign is left in function)
+    """
     x, y = np.meshgrid(np.linspace(0, size - 1, size), np.linspace(0, size - 1, size))
     x -= x_
     y -= y_
@@ -31,6 +86,18 @@ def moffat(x_, y_, a, b, c, beta, size):
 
 
 def contamination(lin_pars, c, source):
+    """
+    Calculate contamination from other sources
+
+    Parameters
+    ----------
+    lin_pars : list
+        List of linear parameters
+    c : list
+        List of nonlinear parameters
+    source : SEBIT.source.Source class
+        Source class object with data
+    """
     flux = np.zeros((source.size, source.size))
     for i in range(source.nstars):
         if i in source.star_idx:
@@ -43,9 +110,19 @@ def contamination(lin_pars, c, source):
     return flux + lin_pars[0] * np.ones((source.size, source.size))
 
 
-def moffat_model(c, flux, source):  # size, nstars, idx, flux_ratio, x_shift, y_shift
-    # x = z // source.size
-    # y = z % source.size
+def moffat_model(c, flux, source):
+    """
+    Moffat models summed with linear parameters fitted
+
+    Parameters
+    ----------
+    c : list
+        List of nonlinear parameters
+    flux : numpy.ndarray (2d)
+        Fluxes of this frame
+    source : SEBIT.source.Source class
+        Source class object with data
+    """
     A = np.ones((len(source.z), 2 + len(source.star_idx)))
     A[:, 0] = 1  # F_bg
     flux_conta = np.zeros(source.size ** 2)
@@ -80,6 +157,20 @@ def moffat_model(c, flux, source):  # size, nstars, idx, flux_ratio, x_shift, y_
 
 
 def psf(num, source, c=None):
+    """
+    PSF model
+
+    Parameters
+    ----------
+    num : int
+        Number of frame that is fitted
+    source : SEBIT.source.Source class
+        Source class object with data
+    c : list
+        List of nonlinear parameters,
+        if None: fit for nonlinear parameters
+        if list: use given nonlinear parameters
+    """
     if num == -1:
         flux = (np.sum(source.flux, axis=0) / len(source.flux)).reshape(source.size ** 2)
     else:

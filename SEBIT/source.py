@@ -24,13 +24,25 @@ class Source(object):
         or coordinate in the format of ra dec (e.g. 351.40691 61.646657)
     size : int, optional
         The side length in pixel  of TESScut image
+    z : list
+        Parametrized x (z // size) and y (z % size)
     sector : int, optional
         The sector for which data should be returned. If None, returns the first observed sector
     search_gaia : boolean, optional
         Whether to search gaia targets in the field
-    nstars : int
-        Number of stars of interest, cut by a magnitude threshold
 
+    Attributes
+    ----------
+    wcs : astropy.wcs.WCS class
+        World Coordinate Systems information of the FFI
+    time : numpy.ndarray (1d)
+        Time of each frame
+    flux : numpy.ndarray (3d)
+        Fluxes of each frame, spanning time space
+    flux_err : numpy.ndarray (3d)
+        Flux errors of each frame, spanning time space
+    gaia : astropy.table.table.Table class
+        Gaia information including ra, dec, brightness, projection on TESS FFI, etc.
     """
     # variable parameters
     nstars = None
@@ -108,9 +120,12 @@ class Source(object):
 
         Attributes
         ----------
+        nstars : int
+            Number of stars of interest, cut by a magnitude threshold
         star_idx : list or str
             Star indexes for PSF fitting, list indexes or 'all'
-        mag_diff
+        mag_diff : int or float
+            Brightness threshold for stars to fit
         """
         nstars = np.where(self.gaia['phot_g_mean_mag'] < (min(self.gaia['phot_g_mean_mag']) + mag_diff))[0][-1]
         self.nstars = nstars
