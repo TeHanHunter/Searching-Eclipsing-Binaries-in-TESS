@@ -60,7 +60,7 @@ def chisq_model(par, model, flux, source):
     return np.sum((model(par, flux, source).y - flux) ** 2)
 
 
-def moffat(x_, y_, a, b, c, beta, size):
+def moffat(x_, y_, a, b, c, beta, source):
     """
     Moffat model of one star at certain location of the frame
 
@@ -79,38 +79,20 @@ def moffat(x_, y_, a, b, c, beta, size):
     beta : float
         Power of moffat model (positive, negative sign is left in function)
     """
-    x, y = np.meshgrid(np.linspace(0, size - 1, size), np.linspace(0, size - 1, size))
-    x -= x_
-    y -= y_
-    g = (1 + (a * x ** 2 + 2 * b * x * y + c * y ** 2)) ** (- beta)
-    return g
-    # TODO: vectorize x, y and g
+    x, y, flux_ratio = np.meshgrid(np.arange(source.size), np.arange(source.size),
+                                   source.gaia['tess_flux_ratio'][0:source.nstars])
+    x_shift = np.meshgrid(np.zeros(source.size), np.zeros(source.size),
+                          np.array(source.gaia['Sector_{}_x'.format(source.sector)])[0:source.nstars])[2]
+    y_shift = np.meshgrid(np.zeros(source.size), np.zeros(source.size),
+                          np.array(source.gaia['Sector_{}_y'.format(source.sector)])[0:source.nstars])[2]
+    x = x - np.add(x_shift, x_)
+    y = y - np.add(y_shift, y_)
+    x = x.transpose(2, 0, 1)
+    y = y.transpose(2, 0, 1)
+    flux_ratio = flux_ratio.transpose(2, 0, 1)
+    flux_cube = (1 + (a * x ** 2 + 2 * b * x * y + c * y ** 2)) ** (- beta)
+    return flux_cube, flux_ratio
     # TODO: set a moffat boundary?
-
-
-def contamination(lin_pars, c, source):
-    """
-    Calculate contamination from other sources
-
-    Parameters
-    ----------
-    lin_pars : list
-        List of linear parameters
-    c : list
-        List of nonlinear parameters
-    source : SEBIT.source.Source class
-        Source class object with data
-    """
-    flux = np.zeros((source.size, source.size))
-    for i in range(source.nstars):
-        if i in source.star_idx:
-            continue
-        else:
-            flux += lin_pars[1] * np.array(source.gaia['tess_flux_ratio'])[i] * moffat(
-                np.array(source.gaia['Sector_{}_x'.format(source.sector)])[i] + c[0],
-                np.array(source.gaia['Sector_{}_y'.format(source.sector)])[i] + c[1], c[2], c[3], c[4],
-                c[5], source.size).reshape((source.size, source.size))
-    return flux + lin_pars[0] * np.ones((source.size, source.size))
 
 
 def moffat_model(c, flux, source):
@@ -126,22 +108,14 @@ def moffat_model(c, flux, source):
     source : SEBIT.source.Source class
         Source class object with data
     """
+    flux_cube, flux_ratio = moffat(c[0], c[1], c[2], c[3], c[4], c[5], source)
     A = np.ones((len(source.z), 2 + len(source.star_idx)))
     A[:, 0] = 1  # F_bg
-    flux_conta = np.zeros(source.size ** 2)
-    for i in range(source.nstars):
-        if i in source.star_idx:
-            continue
-        else:
-            flux_conta += np.array(source.gaia['tess_flux_ratio'])[i] * moffat(
-                np.array(source.gaia['Sector_{}_x'.format(source.sector)])[i] + c[0],
-                np.array(source.gaia['Sector_{}_y'.format(source.sector)])[i] + c[1], c[2], c[3], c[4],
-                c[5], source.size).reshape(source.size ** 2)
-    A[:, 1] = flux_conta  # A
+    A[:, 1] = np.sum((flux_cube * flux_ratio)[np.array(list(set(np.arange(source.nstars)) ^ set(source.star_idx)))],
+                     axis=0).reshape(source.size ** 2)  # F_norm
+
     for j, index in enumerate(source.star_idx):
-        A[:, j + 2] = moffat(np.array(source.gaia['Sector_{}_x'.format(source.sector)])[index] + c[0],
-                             np.array(source.gaia['Sector_{}_y'.format(source.sector)])[index] + c[1],
-                             c[2], c[3], c[4], c[5], source.size).reshape(source.size ** 2)  # F_ebs
+        A[:, j + 2] = flux_cube[j].reshape(source.size ** 2)  # F_ebs
 
     result = Linmodel()
     if np.isnan(np.sum(A)):
@@ -185,7 +159,11 @@ def psf(source, num=0, c=None):
     else:
         cfit = c
     c_result = moffat_model(cfit, flux, source)
-    aperture = source.flux[num] - contamination(c_result.par, cfit, source)
+    flux_cube, flux_ratio = moffat(cfit[0], cfit[1], cfit[2], cfit[3], cfit[4], cfit[5], source)
+    contamination = c_result.par[0] * np.ones((source.size, source.size)) + c_result.par[1] * np.sum(
+        (flux_cube * flux_ratio)[np.array(list(set(np.arange(source.nstars)) ^ set(source.star_idx)))], axis=0)
+    aperture = source.flux[num] - contamination
+
     r = PsfResult()
     r.linparam = list(c_result.par)
     r.nonlinparam = list(cfit)

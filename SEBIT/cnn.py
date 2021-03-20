@@ -101,6 +101,7 @@ def period(source):
     mod_periods = np.zeros((first_trial, second_trial))
     for i in range(len(mod_p)):
         mod_periods[i] = np.linspace(mod_p[i] / np.sqrt(r), mod_p[i] * np.sqrt(r), second_trial)
+        # TODO: linspace
     std_mod_periods = f(mod_periods.reshape((1, first_trial * second_trial))[0])
     mod_periods = np.zeros(len(std_mod_periods))
     for i in range(len(std_mod_periods)):

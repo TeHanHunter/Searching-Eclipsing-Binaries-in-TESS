@@ -47,7 +47,7 @@ class Source(object):
     # variable parameters
     nstars = None
     star_idx = [0]
-    cguess = [0, 0, 1, 0, 1, 2]
+    cguess = [0., 0., 1., 0., 1., 2.]
     var_to_bounds = [(-0.5, 0.5), (-0.5, 0.5), (0, 10.0), (-0.5, 0.5), (0, 10.0), (1, np.inf)]
 
     def __init__(self, name, size=15, sector=None, search_gaia=True):
@@ -106,7 +106,7 @@ class Source(object):
             t[f'tess_mag'] = tess_mag
             t[f'tess_flux'] = tess_flux
             t[f'tess_flux_ratio'] = tess_flux / np.max(tess_flux)
-            t[f'Secpsftor_{self.sector}_x'] = x
+            t[f'Sector_{self.sector}_x'] = x
             t[f'Sector_{self.sector}_y'] = y
             gaia_targets = hstack([gaia_targets, t])
             gaia_targets.sort('tess_mag')
@@ -133,13 +133,15 @@ class Source(object):
         if star_idx is None:
             self.star_idx = np.array([], dtype=int)
         elif star_idx == 'all':
-            self.star_idx = np.arange(self.nstars)
+            self.star_idx = np.arange(self.nstars - 1)
         elif type(star_idx) == int:
             self.star_idx = np.array([star_idx])
         elif type(star_idx) == list and all(isinstance(n, int) for n in star_idx):
             self.star_idx = np.array(star_idx)
+        elif type(star_idx) == np.ndarray and all(isinstance(n, np.int64) for n in set(star_idx)):
+            self.star_idx = star_idx
         else:
-            raise TypeError("Star index (star_idx) type should be a list of ints, int, None or 'all'. ")
+            raise TypeError("Star index (star_idx) type should be a list or np.array of ints, int, None or 'all'. ")
 
 
 if __name__ == '__main__':
