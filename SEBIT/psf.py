@@ -34,6 +34,7 @@ class PsfResult(object):
     result : numpy.ndarray (2d)
         Array of contamination removed FFI
     """
+
     def __init__(self):
         self.linparam = None
         self.nonlinparam = None
@@ -83,6 +84,8 @@ def moffat(x_, y_, a, b, c, beta, size):
     y -= y_
     g = (1 + (a * x ** 2 + 2 * b * x * y + c * y ** 2)) ** (- beta)
     return g
+    # TODO: vectorize x, y and g
+    # TODO: set a moffat boundary?
 
 
 def contamination(lin_pars, c, source):
@@ -156,7 +159,7 @@ def moffat_model(c, flux, source):
     return result
 
 
-def psf(num, source, c=None):
+def psf(source, num=0, c=None):
     """
     PSF model
 
@@ -177,7 +180,8 @@ def psf(num, source, c=None):
         flux = source.flux[num].reshape(source.size ** 2)
     if c is None:
         cfit = optimize.minimize(chisq_model, source.cguess, (moffat_model, flux, source), method="Powell",
-                                 bounds=source.var_to_bounds).x
+                                 bounds=source.var_to_bounds, options={'disp': True}).x
+        # TODO: method?
     else:
         cfit = c
     c_result = moffat_model(cfit, flux, source)

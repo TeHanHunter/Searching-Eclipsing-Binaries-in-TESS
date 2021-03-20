@@ -106,7 +106,7 @@ class Source(object):
             t[f'tess_mag'] = tess_mag
             t[f'tess_flux'] = tess_flux
             t[f'tess_flux_ratio'] = tess_flux / np.max(tess_flux)
-            t[f'Sector_{self.sector}_x'] = x
+            t[f'Secpsftor_{self.sector}_x'] = x
             t[f'Sector_{self.sector}_y'] = y
             gaia_targets = hstack([gaia_targets, t])
             gaia_targets.sort('tess_mag')
@@ -114,29 +114,32 @@ class Source(object):
         else:
             self.gaia = None
 
-    def threshold(self, star_idx, mag_diff=5):
+    def threshold(self, star_idx=None, mag_diff=5):
+        # TODO: None
         """
         Choose stars of interest (primarily for PSF fitting
 
-        Attributes
+        Attributes/
         ----------
         nstars : int
             Number of stars of interest, cut by a magnitude threshold
         star_idx : list or str
-            Star indexes for PSF fitting, list indexes or 'all'
+            Star indexes for PSF fitting, list of indexes, int, None, or 'all'
         mag_diff : int or float
             Brightness threshold for stars to fit
         """
         nstars = np.where(self.gaia['phot_g_mean_mag'] < (min(self.gaia['phot_g_mean_mag']) + mag_diff))[0][-1]
         self.nstars = nstars
-        if star_idx == 'all':
-            self.star_idx = np.arange(self.nstars)
-        elif star_idx == 'none':
+        if star_idx is None:
             self.star_idx = np.array([], dtype=int)
+        elif star_idx == 'all':
+            self.star_idx = np.arange(self.nstars)
+        elif type(star_idx) == int:
+            self.star_idx = np.array([star_idx])
         elif type(star_idx) == list and all(isinstance(n, int) for n in star_idx):
             self.star_idx = np.array(star_idx)
         else:
-            raise TypeError("Star index (star_idx) type should be a list of ints or 'all'. ")
+            raise TypeError("Star index (star_idx) type should be a list of ints, int, None or 'all'. ")
 
 
 if __name__ == '__main__':

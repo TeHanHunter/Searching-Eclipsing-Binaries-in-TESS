@@ -1,27 +1,30 @@
 from SEBIT.source import *
 from SEBIT.psf import *
+
+
 # from SEBIT.cnn import *
 
 
 # from SEBIT.visual import *
 
 
-def search(name: str, size=15):
+def search(name: str, size=15, threshold=5):
     size = int(size)
     if type(size) != int:
         raise TypeError('Pixel size of FFI cut must be an integer.')
     target = Source(name, size=size)
 
     # First fit --> get nonlinear parameters of moffat
-    target.threshold('none')
-    psf_result = psf(-1, target)
+    target.threshold(mag_diff=threshold)
+    psf_result = psf(target, num=-1)
     c = psf_result.nonlinparam
 
     # Second fit --> use nonlinear params to fit each star
-    target.threshold('all')
+    target.threshold(star_idx='all', mag_diff=threshold)
+    # TODO: more options
     result = []
     for i in range(len(target.time)):
-        result.append(psf(i, target, c=c))
+        result.append(psf(target, num=i, c=c))
 
     return result
 
