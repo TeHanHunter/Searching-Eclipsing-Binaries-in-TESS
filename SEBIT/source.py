@@ -24,8 +24,6 @@ class Source(object):
         or coordinate in the format of ra dec (e.g. 351.40691 61.646657)
     size : int, optional
         The side length in pixel  of TESScut image
-    z : list
-        Parametrized x (z // size) and y (z % size)
     sector : int, optional
         The sector for which data should be returned. If None, returns the first observed sector
     search_gaia : boolean, optional
@@ -33,6 +31,8 @@ class Source(object):
 
     Attributes
     ----------
+    z : numpy.ndarray
+        Parametrized x (z // size) and y (z % size)
     wcs : astropy.wcs.WCS class
         World Coordinate Systems information of the FFI
     time : numpy.ndarray (1d)
@@ -48,7 +48,7 @@ class Source(object):
     nstars = None
     star_idx = [0]
     cguess = [0., 0., 1., 0., 1., 2.]
-    var_to_bounds = [(-0.5, 0.5), (-0.5, 0.5), (0, 10.0), (-0.5, 0.5), (0, 10.0), (1, np.inf)]
+    var_to_bounds = [(-0.5, 0.5), (-0.5, 0.5), (0, 10.0), (-0.5, 0.5), (0, 10.0), (1., np.inf)]
 
     def __init__(self, name, size=15, sector=None, search_gaia=True):
         super(Source, self).__init__()
@@ -114,7 +114,7 @@ class Source(object):
         else:
             self.gaia = None
 
-    def threshold(self, star_idx=None, mag_diff=5):
+    def threshold(self, star_idx=None, mag_threshold=15):
         # TODO: None
         """
         Choose stars of interest (primarily for PSF fitting
@@ -125,10 +125,10 @@ class Source(object):
             Number of stars of interest, cut by a magnitude threshold
         star_idx : list or str
             Star indexes for PSF fitting, list of indexes, int, None, or 'all'
-        mag_diff : int or float
-            Brightness threshold for stars to fit
+        mag_threshold : int or float
+            Min magnitude threshold for stars to fit
         """
-        nstars = np.where(self.gaia['phot_g_mean_mag'] < (min(self.gaia['phot_g_mean_mag']) + mag_diff))[0][-1]
+        nstars = np.where(self.gaia['tess_mag'] < mag_threshold)[0][-1]
         self.nstars = nstars
         if star_idx is None:
             self.star_idx = np.array([], dtype=int)

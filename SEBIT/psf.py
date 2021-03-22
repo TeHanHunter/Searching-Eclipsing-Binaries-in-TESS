@@ -19,27 +19,27 @@ class Linmodel:
         self.y = None
 
 
-class PsfResult(object):
-    """
-    Saving results of PSF
-
-    Attributes
-    ----------
-    linparam : list
-        List of linear parameters
-    nonlinparam : list
-        List of nonlinear parameters
-    time : float
-        Time of this frame
-    result : numpy.ndarray (2d)
-        Array of contamination removed FFI
-    """
-
-    def __init__(self):
-        self.linparam = None
-        self.nonlinparam = None
-        self.time = None
-        self.result = None
+# class PsfResult(object):
+#     """
+#     Saving results of PSF
+#
+#     Attributes
+#     ----------
+#     linparam : list
+#         List of linear parameters
+#     nonlinparam : list
+#         List of nonlinear parameters
+#     time : float
+#         Time of this frame
+#     result : numpy.ndarray (2d)
+#         Array of contamination removed FFI
+#     """
+#
+#     def __init__(self):
+#         self.linparam = None
+#         self.nonlinparam = None
+#         self.time = None
+#         self.result = None
 
 
 def chisq_model(par, model, flux, source):
@@ -113,7 +113,6 @@ def moffat_model(c, flux, source):
     A[:, 0] = 1  # F_bg
     A[:, 1] = np.sum((flux_cube * flux_ratio)[np.array(list(set(np.arange(source.nstars)) ^ set(source.star_idx)))],
                      axis=0).reshape(source.size ** 2)  # F_norm
-
     for j, index in enumerate(source.star_idx):
         A[:, j + 2] = flux_cube[j].reshape(source.size ** 2)  # F_ebs
 
@@ -125,9 +124,7 @@ def moffat_model(c, flux, source):
     Ap = A
     bp = flux
     fit = np.linalg.lstsq(Ap, bp, rcond=None)[0]
-
     fluxfit += np.dot(A, fit)
-
     result.y = fluxfit
     result.par = fit
     return result
@@ -164,9 +161,8 @@ def psf(source, num=0, c=None):
         (flux_cube * flux_ratio)[np.array(list(set(np.arange(source.nstars)) ^ set(source.star_idx)))], axis=0)
     aperture = source.flux[num] - contamination
 
-    r = PsfResult()
-    r.linparam = list(c_result.par)
-    r.nonlinparam = list(cfit)
-    r.time = source.time[num]
-    r.result = aperture
+    r = list(c_result.par)
+    r.extend(list(cfit))
+    r.append(source.time[num])
+    r.append(aperture)
     return r

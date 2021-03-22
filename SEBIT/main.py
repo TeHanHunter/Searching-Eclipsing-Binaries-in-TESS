@@ -20,6 +20,7 @@ def search(name: str, size=15, threshold=5):
     result = []
     for i in range(len(source.time)):
         result.append(psf(source, num=i, c=c))
+    result = np.array(result).transpose()
     return result
     # TODO: first search change to all frames; c update; maybe multiprocessing
 
