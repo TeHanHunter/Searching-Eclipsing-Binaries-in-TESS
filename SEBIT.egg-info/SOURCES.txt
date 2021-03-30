@@ -1,13 +1,39 @@
 README.md
+Searching_EB-Command_line.py
+Searching_EB-Multiple_sectors.py
 setup.py
+tess_cnn_sparse.h5
+tess_cnn_strict.h5
+.idea/.gitignore
+.idea/Searching-Eclipsing-Binaries-in-TESS.iml
+.idea/modules.xml
+.idea/other.xml
+.idea/vcs.xml
+.idea/inspectionProfiles/profiles_settings.xml
+CNN Training/TESS_cut_CNN_500.ipynb
+CNN Training/mass_r_teff.dat
+CNN Training/tess_cnn.h5
+CNN Training/tess_cnn_weights.h5
 SEBIT/__init__.py
 SEBIT/cnn.py
 SEBIT/main.py
 SEBIT/psf.py
 SEBIT/source.py
+SEBIT/test.py
 SEBIT/version.py
 SEBIT/visual.py
 SEBIT.egg-info/PKG-INFO
 SEBIT.egg-info/SOURCES.txt
 SEBIT.egg-info/dependency_links.txt
 SEBIT.egg-info/top_level.txt
+Sample output/Picked Periods.png
+Sample output/Prediction_colormap.png
+Sample output/STDV Thereshold choice.png
+Sample output/TESS_Trumpler 5[10,60].dat
+Sample output/[10,60] 1.0000.png
+Sample output/[4,4] 1.0000.jpg
+Sample output/[5,19] 1.0000.jpg
+Sample output/chains_corner.jpg
+Sample output/gaia_targets.dat
+Sample output/modified_geometric.dat
+Sample output/modified_periods.dat

@@ -47,8 +47,8 @@ class Source(object):
     # variable parameters
     nstars = None
     star_idx = [0]
-    cguess = [0., 0., 1., 0., 1., 2.]
-    var_to_bounds = [(-0.5, 0.5), (-0.5, 0.5), (0, 10.0), (-0.5, 0.5), (0, 10.0), (1., np.inf)]
+    cguess = [0., 0., 1., 0., 1., 4.]
+    var_to_bounds = [(-0.5, 0.5), (-0.5, 0.5), (0, 10.0), (-0.5, 0.5), (0, 10.0), (0, np.inf)]
 
     def __init__(self, name, size=15, sector=None, search_gaia=True):
         super(Source, self).__init__()
@@ -115,7 +115,6 @@ class Source(object):
             self.gaia = None
 
     def threshold(self, star_idx=None, mag_threshold=15):
-        # TODO: None
         """
         Choose stars of interest (primarily for PSF fitting
 
