@@ -16,7 +16,7 @@ if __name__ == '__main__':
     A = mesh.A
     A[:, 0] = 1  # F_bg
     A[:, 1] = np.sum(
-        (flux_cube * mesh.flux_ratio)[np.array(list(set(np.arange(source.nstars)) ^ set(source.star_idx)))],
+        (flux_cube * mesh.flux_ratio)[np.array(list(set(np.arange(source.nstars)) ^ set(source.star_index)))],
         axis=0).reshape(source.size ** 2)  # F_norm
-    for j, index in enumerate(source.star_idx):
+    for j, index in enumerate(source.star_index):
         A[:, j + 2] = flux_cube[index].reshape(source.size ** 2)  # F_ebs
