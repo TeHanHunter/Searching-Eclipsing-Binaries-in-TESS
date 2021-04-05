@@ -54,12 +54,18 @@ class Mesh(object):
 class Star(object):
     def __init__(self, index, source, psf_result):
         corr_flux = psf_result[:, 2] / psf_result[:, 1]
+        gaia = source.gaia
         if source.gaia_cut is None:
-            gaia = source.gaia
+            self.source = gaia[index]
         else:
-            gaia = source.gaia_cut
-        self.source = gaia[index]
+            idx = np.where(source.gaia_cut['designation'] == gaia['designation'][index])
+            self.source = source.gaia_cut[idx]
         self.flux = corr_flux / np.median(corr_flux)
+        # x = int(self.source[f'Sector_{source.sector}_x'])
+        # y = int(self.source[f'Sector_{source.sector}_y'])
+        # image = np.dstack(psf_result[:, -1])[x - 1:x + 1, y - 1:y + 1, :]
+        # flux = np.sum(np.sum(image, axis=0), axis=0)
+        # self.flux = flux / psf_result[:, 1]
         self.cnn = 0.5
         self.period = 1
 
@@ -97,9 +103,13 @@ def moffat_model(c, flux, source, mesh):
     source : SEBIT.source.Source class
         Source class object with data
     """
-    x = mesh.x - mesh.x_shift - c[0]
-    y = mesh.y - mesh.y_shift - c[1]
-    flux_cube = (1 + (c[2] * x ** 2 + 2 * c[3] * x * y + c[4] * y ** 2)) ** (- c[5])
+    x = mesh.x_shift + c[0]
+    y = mesh.y_shift + c[1]
+    x_shift = x * np.cos(c[2]) - y * np.sin(c[2])
+    y_shift = x * np.sin(c[2]) + y * np.cos(c[2])
+    x = mesh.x - x_shift
+    y = mesh.y - y_shift
+    flux_cube = (1 + (c[3] * x ** 2 + 2 * c[4] * x * y + c[5] * y ** 2)) ** (- c[6])
     A = mesh.A
     A[:, 0] = 1  # F_bg
     A[:, 1] = np.sum(
@@ -140,21 +150,24 @@ def psf(source, num=0, c=None):
         if list: use given nonlinear parameters
     """
     mesh = Mesh(source)  # can be moved outside
-    if source.gaia_cut is None:
+    if num == -1:
+        flux = np.mean(source.flux, axis=0)
+    elif source.gaia_cut is None:
         flux = source.flux[num]
     else:
         flux = source.flux_cut[num]
     flux_flat = flux.reshape(mesh.size ** 2)
     if c is None:
         # meshgrid
-        cfit = optimize.minimize(chisq_model, source.cguess, (moffat_model, flux_flat, source, mesh), method="Powell",
-                                 bounds=source.var_to_bounds).x  # options={'disp': True}
+        cfit = optimize.minimize(chisq_model, source.cguess, (moffat_model, flux_flat, source, mesh),
+                                 bounds=source.var_to_bounds, method="Powell").x
+        # options={'disp': True}
 
         # TODO: method?
     else:
         cfit = c
     c_result = moffat_model(cfit, flux_flat, source, mesh)
-    flux_cube = moffat_model(cfit, flux_flat, source, mesh).flux_cube
+    flux_cube = c_result.flux_cube
     contamination = c_result.par[0] * np.ones((mesh.size, mesh.size)) + c_result.par[1] * np.sum(
         (flux_cube * mesh.flux_ratio)[np.array(list(set(np.arange(source.nstars)) ^ set(source.star_index)))], axis=0)
     aperture = flux - contamination

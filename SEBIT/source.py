@@ -47,13 +47,13 @@ class Source(object):
     # variable parameters
     nstars = None
     star_index = [0]
-    cguess = [0., 0., 1., 0., 1., 4.]
-    var_to_bounds = [(-0.5, 0.5), (-0.5, 0.5), (0, 10.0), (-0.5, 0.5), (0, 10.0), (0, np.inf)]
+    cguess = [0., 0., 0., 1., 0., 1., 3.]
+    var_to_bounds = [(-0.5, 0.5), (-0.5, 0.5), (-0.1, 0.1), (0, 10.0), (-0.5, 0.5), (0, 10.0), (0, np.inf)]
     cut_size = 11
-    center_pixel = [0, 0]
     gaia_cut = None
     flux_cut = None
     flux_cut_err = None
+    inner_star = []
 
     def __init__(self, name, size=15, sector=None, search_gaia=True, mag_threshold=15):
         super(Source, self).__init__()
@@ -113,12 +113,13 @@ class Source(object):
             t[f'tess_flux_ratio'] = tess_flux / np.max(tess_flux)
             t[f'Sector_{self.sector}_x'] = x
             t[f'Sector_{self.sector}_y'] = y
+            t['variability'] = np.zeros(len(gaia_targets), dtype=int)
             gaia_targets = hstack([gaia_targets, t])
             gaia_targets.sort('tess_mag')
 
             gaia_table = Table(names=gaia_targets.colnames,
                                dtype=('str', 'float64', 'float64', 'float64', 'float64', 'float64',
-                                      'float64', 'float64', 'float64', 'float64', 'float64'))
+                                      'float64', 'float64', 'float64', 'float64', 'float64', 'float64'))
             x_tess = gaia_targets[f'Sector_{self.sector}_x']
             y_tess = gaia_targets[f'Sector_{self.sector}_y']
             for i in range(len(gaia_targets)):
@@ -132,6 +133,12 @@ class Source(object):
             else:
                 nstars = np.where(self.gaia['tess_mag'] < self.mag_threshold)[0][-1]
                 self.nstars = nstars
+
+            x_table = gaia_table[f'Sector_{self.sector}_x']
+            y_table = gaia_table[f'Sector_{self.sector}_y']
+            for i in range(self.nstars):
+                if 2 < x_table[i] < self.size - 3 and 2 < y_table[i] < self.size - 3:
+                    self.inner_star.append(i)
         else:
             self.gaia = None
 
@@ -155,9 +162,9 @@ class Source(object):
             self.star_index = np.arange(self.nstars - 1)
         elif type(star_idx) == int:
             self.star_index = np.array([star_idx])
-        elif type(star_idx) == list and all(isinstance(n, int) for n in star_idx):
+        elif type(star_idx) == list and all(isinstance(n, (int, np.int64)) for n in star_idx):
             self.star_index = np.array(star_idx)
-        elif type(star_idx) == np.ndarray and all(isinstance(n, np.int64) for n in set(star_idx)):
+        elif type(star_idx) == np.ndarray and all(isinstance(n, (int, np.int64)) for n in set(star_idx)):
             self.star_index = star_idx
         else:
             raise TypeError("Star index (star_index) type should be a list or np.array of ints, int, None or 'all'. ")
@@ -167,97 +174,24 @@ class Source(object):
         Below is dividing the cut into 9 regions: center, 4 corners and 4 edges. By deciding which
         region a star is at, returns a cut of its neighborhood.
         """
+
         self.star_index = [star_idx]
         self.z = np.arange(11 ** 2)
         x = self.gaia[f'Sector_{self.sector}_x']
         y = self.gaia[f'Sector_{self.sector}_y']
-        t = Table(names=self.gaia.colnames, dtype=('str', 'float64', 'float64', 'float64', 'float64', 'float64',
-                                                   'float64', 'float64', 'float64', 'float64', 'float64'))
+        x_mid = int(min(self.size - 6, max(x[star_idx], 5)))
+        y_mid = int(min(self.size - 6, max(y[star_idx], 5)))
+        self.flux_cut = self.flux[:, x_mid - 5:x_mid + 6, y_mid - 5:y_mid + 6]
+        self.flux_cut_err = self.flux_err[:, x_mid - 5:x_mid + 6, y_mid - 5:y_mid + 6]
+        in_frame = (np.abs(x_mid - x) < 7) & (np.abs(y_mid - y) < 7)
+        t = self.gaia[in_frame]
 
-        # if star is at center (more probable as the cut gets bigger)
-        if 5 <= x[star_idx] <= (self.size - 6) and 5 <= y[star_idx] <= (self.size - 6):
-            x_int = int(x[star_idx])
-            y_int = int(y[star_idx])
-            self.center_pixel = [x_int, y_int]
-            self.flux_cut = self.flux[:, y_int - 5:y_int + 6, x_int - 5:x_int + 6]
-            self.flux_cut_err = self.flux_err[:, y_int - 5:y_int + 6, x_int - 5:x_int + 6]
-            for i in range(len(self.gaia)):
-                if x_int - 7 <= x[i] <= x_int + 7 and y_int - 7 <= y[i] <= y_int + 7:
-                    t.add_row(self.gaia[i])
-
-        # if star is at edges (less probable)
-        elif x[star_idx] < 5 and 5 < y[star_idx] < (self.size - 6):
-            y_int = int(y[star_idx])
-            self.center_pixel = [5, y_int]
-            self.flux_cut = self.flux[:, y_int - 5:y_int + 6, 0:11]
-            self.flux_cut_err = self.flux_err[:, y_int - 5:y_int + 6, 0:11]
-            for i in range(len(self.gaia)):
-                if -2 <= x[i] <= 12 and y_int - 7 <= y[i] <= y_int + 7:
-                    t.add_row(self.gaia[i])
-        elif x[star_idx] > (self.size - 6) > y[star_idx] > 5:
-            y_int = int(y[star_idx])
-            self.center_pixel = [self.size - 6, y_int]
-            self.flux_cut = self.flux[:, y_int - 5:y_int + 6, (self.size - 11):self.size]
-            self.flux_cut_err = self.flux_err[:, y_int - 5:y_int + 6, (self.size - 11):self.size]
-            for i in range(len(self.gaia)):
-                if self.size - 12 <= x[i] <= self.size + 2 and y_int - 7 <= y[i] <= y_int + 7:
-                    t.add_row(self.gaia[i])
-        elif 5 < x[star_idx] < (self.size - 6) and y[star_idx] < 5:
-            x_int = int(x[star_idx])
-            self.center_pixel = [x_int, 5]
-            self.flux_cut = self.flux[:, 0:11, x_int - 5:x_int + 6]
-            self.flux_cut_err = self.flux_err[:, 0:11, x_int - 5:x_int + 6]
-            for i in range(len(self.gaia)):
-                if x_int - 7 <= x[i] <= x_int + 7 and -2 <= y[i] <= 12:
-                    t.add_row(self.gaia[i])
-        elif 5 < x[star_idx] < (self.size - 6) < y[star_idx]:
-            x_int = int(x[star_idx])
-            self.center_pixel = [x_int, self.size - 6]
-            self.flux_cut = self.flux[:, (self.size - 11):self.size, x_int - 5:x_int + 6]
-            self.flux_cut_err = self.flux_err[:, (self.size - 11):self.size, x_int - 5:x_int + 6]
-            for i in range(len(self.gaia)):
-                if x_int - 7 <= x[i] <= x_int + 7 and self.size - 12 <= y[i] <= self.size + 2:
-                    t.add_row(self.gaia[i])
-
-        # if star is at corners (least probable)
-        elif x[star_idx] <= 5 and y[star_idx] <= 5:
-            self.center_pixel = [5, 5]
-            self.flux_cut = self.flux[:, 0:11, 0:11]
-            self.flux_cut_err = self.flux_err[:, 0:11, 0:11]
-            for i in range(len(self.gaia)):
-                if -2 <= x[i] <= 12 and -2 <= y[i] <= 12:
-                    t.add_row(self.gaia[i])
-        elif x[star_idx] <= 5 and y[star_idx] >= (self.size - 6):
-            self.center_pixel = [5, self.size - 6]
-            self.flux_cut = self.flux[:, (self.size - 11):self.size, 0:11]
-            self.flux_cut_err = self.flux_err[:, (self.size - 11):self.size, 0:11]
-            for i in range(len(self.gaia)):
-                if -2 <= x[i] <= 12 and (self.size - 12) <= y[i] <= self.size + 2:
-                    t.add_row(self.gaia[i])
-        elif x[star_idx] >= (self.size - 6) and y[star_idx] <= 5:
-            self.center_pixel = [self.size - 6, 5]
-            self.flux_cut = self.flux[:, 0:11, (self.size - 11):self.size]
-            self.flux_cut_err = self.flux_err[:, 0:11, (self.size - 11):self.size]
-            for i in range(len(self.gaia)):
-                if (self.size - 12) <= x[i] <= self.size + 2 and -2 <= y[i] <= 12:
-                    t.add_row(self.gaia[i])
-        elif x[star_idx] >= (self.size - 6) and y[star_idx] >= (self.size - 6):
-            self.center_pixel = [self.size - 6, self.size - 6]
-            self.flux_cut = self.flux[:, (self.size - 11):self.size, (self.size - 11):self.size]
-            self.flux_cut_err = self.flux_err[:, (self.size - 11):self.size, (self.size - 11):self.size]
-            for i in range(len(self.gaia)):
-                if (self.size - 12) <= x[i] <= self.size + 2 and (self.size - 12) <= y[i] <= self.size + 2:
-                    t.add_row(self.gaia[i])
-        else:
-            print('Something is wrong about the star')
-        t[f'Sector_{self.sector}_x'][:] = t[f'Sector_{self.sector}_x'] - self.center_pixel[0] + 5
-        t[f'Sector_{self.sector}_y'][:] = t[f'Sector_{self.sector}_y'] - self.center_pixel[1] + 5
+        t[f'Sector_{self.sector}_x'][:] = t[f'Sector_{self.sector}_x'] - x_mid + 5
+        t[f'Sector_{self.sector}_y'][:] = t[f'Sector_{self.sector}_y'] - y_mid + 5
         self.gaia_cut = t
         self.star_index = [np.where(self.gaia['designation'][star_idx] == self.gaia_cut['designation'])[0][0]]
         nstars = np.where(self.gaia['tess_mag'] < self.mag_threshold)[0][-1]
         self.nstars = nstars
-
-        # TODO: remove outside stars
 
 
 if __name__ == '__main__':
