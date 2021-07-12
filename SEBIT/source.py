@@ -87,7 +87,6 @@ class Source(object):
         self.time = data_time
         self.flux = data_flux
         self.flux_err = data_flux_err
-        # TODO: err dimension
         if search_gaia:
             catalogdata = Catalogs.query_object(self.name, radius=(self.size + 2) * 21 * 0.707 / 3600, catalog="Gaia")
             # catalogdata.sort("phot_g_mean_mag")
@@ -137,7 +136,7 @@ class Source(object):
             x_table = gaia_table[f'Sector_{self.sector}_x']
             y_table = gaia_table[f'Sector_{self.sector}_y']
             for i in range(self.nstars):
-                if 2 < x_table[i] < self.size - 3 and 2 < y_table[i] < self.size - 3:
+                if -2 < x_table[i] < self.size + 1 and -2 < y_table[i] < self.size + 1:
                     self.inner_star.append(i)
         else:
             self.gaia = None
@@ -169,20 +168,25 @@ class Source(object):
         else:
             raise TypeError("Star index (star_index) type should be a list or np.array of ints, int, None or 'all'. ")
 
+    def ffi(self):
+        self.z = np.arange(self.size ** 2)
+        self.star_index = np.array([], dtype=int)
+        self.nstars = np.where(self.gaia['tess_mag'] < self.mag_threshold)[0][-1]
+        self.gaia_cut = None
+
     def cut(self, star_idx: int):
         """
         Below is dividing the cut into 9 regions: center, 4 corners and 4 edges. By deciding which
         region a star is at, returns a cut of its neighborhood.
         """
 
-        self.star_index = [star_idx]
-        self.z = np.arange(11 ** 2)
+        self.z = np.arange(121)
         x = self.gaia[f'Sector_{self.sector}_x']
         y = self.gaia[f'Sector_{self.sector}_y']
         x_mid = int(min(self.size - 6, max(x[star_idx], 5)))
         y_mid = int(min(self.size - 6, max(y[star_idx], 5)))
-        self.flux_cut = self.flux[:, x_mid - 5:x_mid + 6, y_mid - 5:y_mid + 6]
-        self.flux_cut_err = self.flux_err[:, x_mid - 5:x_mid + 6, y_mid - 5:y_mid + 6]
+        self.flux_cut = self.flux[:, y_mid - 5:y_mid + 6, x_mid - 5:x_mid + 6]
+        # self.flux_cut_err = self.flux_err[:, x_mid - 5:x_mid + 6, y_mid - 5:y_mid + 6]
         in_frame = (np.abs(x_mid - x) < 7) & (np.abs(y_mid - y) < 7)
         t = self.gaia[in_frame]
 

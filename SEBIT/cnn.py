@@ -1,32 +1,22 @@
 import os
 import sys
+import pickle
 import warnings
 import tensorflow
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-import matplotlib.patches as mpatches
-import matplotlib.gridspec as gridspec
-from tqdm import tqdm
-from wotan import flatten
-from astropy.wcs import WCS
-from astropy.io import ascii
-from multiprocessing import Pool, Array
-from astroquery.mast import Tesscut
-from progress.bar import ChargingBar
-from astroquery.mast import Catalogs
-from scipy.interpolate import interp1d
-from astropy.coordinates import SkyCoord
-from tensorflow.keras.models import Model
-from tensorflow.keras.optimizers import SGD
-from astropy.table import Table, Column, MaskedColumn, hstack
-from tensorflow.keras.layers import Input, Dense, Conv1D, AveragePooling1D, Concatenate, Flatten, Dropout
 
 if not sys.warnoptions:
     warnings.simplefilter("ignore")
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-colors = [(1, 1, 0.5, c) for c in np.linspace(0, 1, 100)]
+import numpy as np
+import matplotlib.pyplot as plt
+from tqdm import tqdm
+from wotan import flatten
+from scipy.interpolate import interp1d
+from multiprocessing import Pool, Array
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.layers import Input, Dense, Conv1D, AveragePooling1D, Flatten
 
 
 def make_cnn(maxlen):
@@ -54,7 +44,7 @@ def make_cnn(maxlen):
     return model
 
 
-def period(source):
+def period(source, stdv_threshold='0.0005'):
     first_trial = 200
     second_trial = 200
     period_range = 10  # days
@@ -86,8 +76,6 @@ def period(source):
         gap = np.diff(t_pf_sort)
         std_geo[i] = np.std(gap / p)
 
-    stdv_threshold = input('Threshold of time interval standard deviation [Default 0.0005]: ') or '0.0005'
-
     # first trial periods
     f = interp1d(sample_period[np.where(std < float(stdv_threshold))], std[np.where(std < float(stdv_threshold))],
                  kind='nearest')
@@ -95,7 +83,6 @@ def period(source):
     mod_p = np.zeros(len(std_mod_p))
     for i in range(len(std_mod_p)):
         mod_p[i] = sample_period[np.where(std == std_mod_p[i])]
-    # ascii.write([mod_p], location + 'modified_geometric.csv', names=['mod_p'], overwrite=True)
 
     # second trial periods
     mod_periods = np.zeros((first_trial, second_trial))
@@ -106,6 +93,134 @@ def period(source):
     mod_periods = np.zeros(len(std_mod_periods))
     for i in range(len(std_mod_periods)):
         mod_periods[i] = sample_period[np.where(std == std_mod_periods[i])]
-    # np.savetxt(location + 'modified_periods.csv', mod_periods.reshape((first_trial, second_trial)).transpose(),
-    #            fmt='%.6e', delimiter=",")
     return mod_p, mod_periods.reshape((first_trial, second_trial))
+
+
+def cnn_prediction(source, lightcurve, star_num=0, Sample_number=500, mod_p=None, mod_periods=None):
+    time_raw = source.time
+    flux_raw = lightcurve[star_num]
+    # mean = np.mean(flux_raw)
+    flux_1d = flatten(time_raw, flux_raw, break_tolerance=0.1, window_length=1, edge_cutoff=0.25,
+                      return_trend=False)
+    # remove nan in flux again(causes trouble for cnn)
+    index = np.invert(np.isnan(flux_1d))
+    flux_1d = flux_1d[index]
+    time_1d = time_raw[index]
+    # make CNN tests
+    period = mod_p
+    t_0 = np.linspace(-0.1, 0.1, 5)
+    predict = np.zeros((len(period), len(t_0)))
+    # cut = int(min(len(time_1d), length_sector[0]))
+    cut = len(time_1d)
+    argsort = flux_1d[0:cut].argsort()
+
+    for j in range(len(period)):
+        p = period[j]
+        t_zero = np.median(time_1d[0:cut][argsort][0:20] % p) / p
+        for k in range(len(t_0)):
+            t_pf = np.array((time_1d[0:cut] + (0.5 - t_zero + t_0[k]) * p) % p)
+            t = np.linspace(np.min(t_pf), np.max(t_pf), Sample_number)
+            f = interp1d(t_pf, flux_1d[0:cut], kind='nearest')
+            flux = f(t)
+            # np.max(flux) - np.min(flux) np.percentile(flux, 100) - np.percentile(flux, 0)
+            flux /= (np.max(flux) - np.min(flux)) / 4
+            flux -= np.average(flux)
+            predict[j][k] = np.array(cnn(flux.reshape((1, Sample_number, 1))))
+        if np.max(predict) >= 0.99999:
+            break
+    idx = np.where(predict == np.max(predict))
+    if np.max(predict) < 0.5:
+        pass
+    else:
+        ### repeat in the region near the best result of first step for higher precision
+        period_ = mod_periods[np.where(period == period[idx[0][0]])][0]
+
+        t_0_ = np.linspace(-0.1, 0.1, 5)
+        predict = np.zeros((len(period_), len(t_0_)))
+        for j in range(len(period_)):
+            p = period_[j]
+            t_zero = np.mean(time_1d[argsort][0:5] % p) / p
+            for k in range(len(t_0_)):
+                t_pf = np.array((time_1d + (0.5 - t_zero + t_0_[k]) * p) % p)
+                t = np.linspace(np.min(t_pf), np.max(t_pf), Sample_number)
+                f = interp1d(t_pf, flux_1d, kind='nearest')
+                flux = f(t)
+                flux /= (np.max(flux) - np.min(flux)) / 4
+                flux -= np.average(flux)
+                predict[j][k] = np.array(cnn(flux.reshape((1, Sample_number, 1))))
+
+        idx = np.where(predict == np.max(predict))
+        p = period_[idx[0][0]]
+        t_0 = t_0_[idx[1][0]]
+        return (p, t_0, np.max(predict))
+
+
+if __name__ == '__main__':
+    with open('/mnt/c/Users/tehan/Documents/GitHub/Searching-Eclipsing-Binaries-in-TESS/source_NGC_7654_90.pkl',
+              'rb') as input:
+        source = pickle.load(input)
+    lightcurve = np.load('/mnt/c/users/tehan/desktop/epsf_all_lc.npy')
+    Sample_number = 500
+    tensorflow.get_logger().setLevel('ERROR')  ## ignore internal TensorFlow Warning message
+    cnn = make_cnn(Sample_number)
+    cnn_weights = '/mnt/c/users/tehan/documents/github/Searching-Eclipsing-Binaries-in-TESS/tess_cnn.h5'
+    cnn.load_weights(str(cnn_weights))
+
+    mod_p, mod_periods = period(source)
+
+
+    def multi_cnn(star_num):
+        r = cnn_prediction(source, lightcurve, star_num=star_num, Sample_number=500, mod_p=mod_p,
+                           mod_periods=mod_periods)
+        return r
+
+
+    # p, t_0, predict = cnn_prediction(source, lightcurve, star_num=77, Sample_number=500, mod_p=mod_p,
+    #                                  mod_periods=mod_periods)
+
+    ### stars in the frame:
+    # in_frame = []
+    # for i in range(len(lightcurve)):
+    #     if 0 <= source.gaia['Sector_17_x'][i] <= 89 and 0 <= source.gaia['Sector_17_y'][i] <= 89:
+    #         in_frame.append(i)
+    in_frame = np.where(np.min(lightcurve, axis=1) > 0)[0]
+
+    # with Pool(10) as p:
+    #     r = list(tqdm(p.imap(multi_cnn, in_frame),
+    #                   total=len(in_frame)))
+    #
+    #     np.save('/mnt/c/users/tehan/desktop/cnn_result', r)
+    r = np.load('/mnt/c/users/tehan/desktop/cnn_result.npy', allow_pickle=True)
+
+    for i, index in enumerate(in_frame):
+        if r[i] is not None and r[i][-1] > 0.95:
+            plt.plot(source.time, lightcurve[index])
+            plt.title(r[i][0])
+            plt.show()
+
+    # x = source.gaia['Sector_17_x']
+    # y = source.gaia['Sector_17_y']
+    # dis = np.sqrt(
+    #     (np.array(x) - source.gaia['Sector_17_x'][77]) ** 2 + (np.array(y) - source.gaia['Sector_17_y'][77]) ** 2)
+    # arg = np.argsort(dis)
+    # for i in range(10):
+    #     plt.plot(lightcurve[arg[np.where(arg < 1000)][i]])
+    #     plt.show()
+
+    # r = np.load('/mnt/c/users/tehan/desktop/cnn_result.npy', allow_pickle=True)
+    # eb = []
+    # per = []
+    # for i, index in enumerate(in_frame):
+    #     if r[i] is not None and r[i][-1] > 0.999:
+    #         per.append(r[i][0])
+    #         eb.append(index)
+    # x = source.gaia['Sector_17_x']
+    # y = source.gaia['Sector_17_y']
+    # plt.imshow(np.log10(source.flux[0]), vmin=np.min(np.log10(source.flux[0])),
+    #            vmax=np.max(np.log10(source.flux[0])), origin='lower', cmap='gray')
+    # plt.scatter(x[eb], y[eb], s=3, c=per, cmap='tab20')
+    # plt.title('Periods predictions')
+    # cbar = plt.colorbar()
+    # cbar.labelbad = 55
+    # cbar.set_label('Periods (days)', rotation=270, labelpad=15)
+    # plt.show()

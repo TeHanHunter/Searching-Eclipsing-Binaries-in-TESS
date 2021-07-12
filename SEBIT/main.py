@@ -2,25 +2,9 @@ from SEBIT.source import *
 from SEBIT.psf import *
 from tqdm.contrib.concurrent import process_map
 
-source = None
-c_result = None
-
 
 def psf_multi(number):
     return psf(source, num=number)
-
-
-def psf_single(number):
-    source.cut(number)
-    index = source.star_index
-    index.extend(np.where(source.gaia_cut['variability'] >= 1)[0])
-    print(index)
-    source.star_idx(star_idx=index)
-    result = []
-    for i in range(len(source.time)):
-        result.append(psf(source, num=i, c=c_result[i]))
-    result = np.array(result)
-    return Star(number, source, result)
 
 
 def search(name: str, size=15, sector=None, search_gaia=True, threshold=15):

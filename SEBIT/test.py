@@ -72,7 +72,7 @@ if __name__ == '__main__':
         index_cut = np.append(source.star_index, index)
 
         source.star_idx(star_idx=index)
-        mesh = Mesh(source)
+        mesh = Mesh(source)  #TODO: check for size of mesh = size of cut
         source.cguess = psf(source, num=-2, mesh=mesh)[2+len(index):9+len(index)]
         result = []
         for i in range(len(source.time)):
