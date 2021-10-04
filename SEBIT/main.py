@@ -2,6 +2,8 @@ from SEBIT.source import *
 from SEBIT.psf import *
 from tqdm.contrib.concurrent import process_map
 
+# cd /mnt/c/Users/tehan/Documents/Github/Searching-Eclipsing-Binaries-in-TESS/
+# pip3 install -e .
 
 def psf_multi(number):
     return psf(source, num=number)

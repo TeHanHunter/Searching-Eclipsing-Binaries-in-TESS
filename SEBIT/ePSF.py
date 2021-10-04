@@ -50,81 +50,88 @@ def paraboloid(z_0, z_1, z_2, z_3, z_4, z_5, scale=0.1):
     return x_max, y_max
 
 
-def get_psf_(source, factor=2, position=0, star_idx=0, x_corr=0, y_corr=0):
-    psf_size = 11
-    half_size = int((psf_size - 1) / 2)
-    over_size = psf_size * factor + 1
-    # global flux_ratio, x_shift, y_shift, x_round, y_round, x_sign, y_sign
-    # nstars = source.nstars
-    size = source.size  # TODO: must be even?
-    flux_ratio = np.array(source.gaia['tess_flux_ratio'])
-    x_shift = np.array(source.gaia[f'Sector_{source.sector}_x'])
-    y_shift = np.array(source.gaia[f'Sector_{source.sector}_y'])
-    x_shift = x_shift + x_corr
-    y_shift = y_shift + y_corr
-
-    scale = 0.5
-    if position == 0:
-        pass
-    elif position == 1:
-        x_shift[star_idx] = x_shift[star_idx] + scale
-    elif position == 2:
-        y_shift[star_idx] = y_shift[star_idx] + scale
-    elif position == 3:
-        x_shift[star_idx] = x_shift[star_idx] - scale
-    elif position == 4:
-        y_shift[star_idx] = y_shift[star_idx] - scale
-    elif position == 5:
-        x_shift[star_idx] = x_shift[star_idx] + scale
-        y_shift[star_idx] = y_shift[star_idx] + scale
-
-    x_round = np.round(x_shift).astype(int)
-    y_round = np.round(y_shift).astype(int)
-
-    left = np.maximum(0, x_round - half_size)
-    right = np.minimum(size, x_round + half_size) + 1
-    down = np.maximum(0, y_round - half_size)
-    up = np.minimum(size, y_round + half_size) + 1
-    x_residual = x_shift % (1 / factor) * factor
-    y_residual = y_shift % (1 / factor) * factor
-
-    x_p = np.arange(size)
-    y_p = np.arange(size)
-    coord = np.arange(size ** 2).reshape(size, size)
-    A = np.zeros((size ** 2, over_size ** 2 + 1))
-    A[:, -1] = np.ones(size ** 2)
-    b = source.flux[0].flatten()
-
-    for i in range(len(source.gaia)):
-        x_psf = factor * (x_p[left[i]:right[i]] - x_round[i] + (psf_size - 1) / 2) + (x_shift[i] % 1) // (1 / factor)
-        y_psf = factor * (y_p[down[i]:up[i]] - y_round[i] + (psf_size - 1) / 2) + (y_shift[i] % 1) // (1 / factor)
-        # y_psf = y_p + (y_shift[i] % 1) // (1 / factor)
-        x_psf, y_psf = np.meshgrid(x_psf, y_psf)  # super slow here
-        a = np.array(x_psf + y_psf * over_size, dtype=np.int64)
-        a = a.flatten()
-        index = coord[down[i]:up[i], left[i]:right[i]]
-        A[np.repeat(index, 4), np.array([a, a + 1, a + over_size, a + over_size + 1]).flatten(order='F')] += \
-            flux_ratio[i] * bilinear(x_residual[i], y_residual[i], repeat=len(a))
-
-    remove_index = (np.arange(over_size) + 1) * over_size - 1
-    diag = np.diag(np.ones(over_size ** 2))
-    A_1 = diag - np.concatenate((np.zeros((over_size ** 2, 1)), diag[:, 0: - 1]), axis=-1)
-    A_1 = np.delete(A_1, remove_index, 0)
-    A_1 = np.concatenate((A_1, (np.zeros((over_size * (over_size - 1), 1)))), axis=-1)
-    A_2 = diag - np.concatenate((np.zeros((over_size ** 2, over_size)), diag[:, 0: - over_size]), axis=-1)
-    A_2 = A_2[0: - over_size]
-    A_2 = np.concatenate((A_2, (np.zeros((over_size * (over_size - 1), 1)))), axis=-1)
-    A = np.append(A, A_1, axis=0)
-    A = np.append(A, A_2, axis=0)
-    b = np.append(b, np.zeros(2 * over_size * (over_size - 1)))
-    scaler = np.sqrt(source.flux_err[0].flatten() ** 2 + source.flux[0].flatten())
-    scaler = np.append(scaler, 1e3 * np.ones(2 * over_size * (over_size - 1)))
-    fit = np.linalg.lstsq(A / scaler[:, np.newaxis], b / scaler, rcond=None)[0]
-    fluxfit = np.dot(A, fit)
-    return fit, fluxfit, x_round, y_round
+# def get_psf_(source, factor=2, position=0, star_idx=0, x_corr=0, y_corr=0):
+#     psf_size = 11
+#     half_size = int((psf_size - 1) / 2)
+#     over_size = psf_size * factor + 1
+#     # global flux_ratio, x_shift, y_shift, x_round, y_round, x_sign, y_sign
+#     # nstars = source.nstars
+#     size = source.size  # TODO: must be even?
+#     flux_ratio = np.array(source.gaia['tess_flux_ratio'])
+#     x_shift = np.array(source.gaia[f'Sector_{source.sector}_x'])
+#     y_shift = np.array(source.gaia[f'Sector_{source.sector}_y'])
+#     x_shift = x_shift + x_corr
+#     y_shift = y_shift + y_corr
+#
+#     scale = 0.5
+#     if position == 0:
+#         pass
+#     elif position == 1:
+#         x_shift[star_idx] = x_shift[star_idx] + scale
+#     elif position == 2:
+#         y_shift[star_idx] = y_shift[star_idx] + scale
+#     elif position == 3:
+#         x_shift[star_idx] = x_shift[star_idx] - scale
+#     elif position == 4:
+#         y_shift[star_idx] = y_shift[star_idx] - scale
+#     elif position == 5:
+#         x_shift[star_idx] = x_shift[star_idx] + scale
+#         y_shift[star_idx] = y_shift[star_idx] + scale
+#
+#     x_round = np.round(x_shift).astype(int)
+#     y_round = np.round(y_shift).astype(int)
+#
+#     left = np.maximum(0, x_round - half_size)
+#     right = np.minimum(size, x_round + half_size) + 1
+#     down = np.maximum(0, y_round - half_size)
+#     up = np.minimum(size, y_round + half_size) + 1
+#     x_residual = x_shift % (1 / factor) * factor
+#     y_residual = y_shift % (1 / factor) * factor
+#
+#     x_p = np.arange(size)
+#     y_p = np.arange(size)
+#     coord = np.arange(size ** 2).reshape(size, size)
+#     A = np.zeros((size ** 2, over_size ** 2 + 1))
+#     A[:, -1] = np.ones(size ** 2)
+#     b = source.flux[0].flatten()
+#
+#     for i in range(len(source.gaia)):
+#         x_psf = factor * (x_p[left[i]:right[i]] - x_round[i] + half_size) + (x_shift[i] % 1) // (1 / factor)
+#         y_psf = factor * (y_p[down[i]:up[i]] - y_round[i] + half_size) + (y_shift[i] % 1) // (1 / factor)
+#         # y_psf = y_p + (y_shift[i] % 1) // (1 / factor)
+#         # x_psf = factor * (x_p[left[i]:right[i]] - x_round[i] + half_size) + factor // 2 - 0.5 + x_sign[i] * (
+#         #             x_offset[i] + 0.5)
+#         # y_psf = factor * (y_p[down[i]:up[i]] - y_round[i] + half_size) + factor // 2 - 0.5 + y_sign[i] * (
+#         #             y_offset[i] + 0.5)
+#         x_psf, y_psf = np.meshgrid(x_psf, y_psf)  # super slow here
+#         a = np.array(x_psf + y_psf * over_size, dtype=np.int64)
+#         a = a.flatten()
+#         index = coord[down[i]:up[i], left[i]:right[i]]
+#         A[np.repeat(index, 4), np.array([a, a + 1, a + over_size, a + over_size + 1]).flatten(order='F')] += \
+#             flux_ratio[i] * bilinear(x_residual[i], y_residual[i], repeat=len(a))
+#
+#     remove_index = (np.arange(over_size) + 1) * over_size - 1
+#     diag = np.diag(np.ones(over_size ** 2))
+#     A_1 = diag - np.concatenate((np.zeros((over_size ** 2, 1)), diag[:, 0: - 1]), axis=-1)
+#     A_1 = np.delete(A_1, remove_index, 0)
+#     A_1 = np.concatenate((A_1, (np.zeros((over_size * (over_size - 1), 1)))), axis=-1)
+#     A_2 = diag - np.concatenate((np.zeros((over_size ** 2, over_size)), diag[:, 0: - over_size]), axis=-1)
+#     A_2 = A_2[0: - over_size]
+#     A_2 = np.concatenate((A_2, (np.zeros((over_size * (over_size - 1), 1)))), axis=-1)
+#     A = np.append(A, A_1, axis=0)
+#     A = np.append(A, A_2, axis=0)
+#     b = np.append(b, np.zeros(2 * over_size * (over_size - 1)))
+#     scaler = np.sqrt(source.flux_err[0].flatten() ** 2 + source.flux[0].flatten())
+#     scaler = np.append(scaler, 1e3 * np.ones(2 * over_size * (over_size - 1)))
+#     fit = np.linalg.lstsq(A / scaler[:, np.newaxis], b / scaler, rcond=None)[0]
+#     fluxfit = np.dot(A, fit)
+#     return fit, fluxfit, x_round, y_round
 
 
 def get_psf(source, factor=2):
+    # even only
+    if factor % 2 != 0:
+        raise ValueError('Factor must be even.')
     psf_size = 11
     half_size = int((psf_size - 1) / 2)
     over_size = psf_size * factor + 1
@@ -144,18 +151,25 @@ def get_psf(source, factor=2):
     up = np.minimum(size, y_round + half_size) + 1
     x_residual = x_shift % (1 / factor) * factor
     y_residual = y_shift % (1 / factor) * factor
+    # x_sign = np.sign(x_round - x_shift)
+    # y_sign = np.sign(y_round - y_shift)
 
     x_p = np.arange(size)
     y_p = np.arange(size)
     coord = np.arange(size ** 2).reshape(size, size)
     A = np.zeros((size ** 2, over_size ** 2 + 1))
     A[:, -1] = np.ones(size ** 2)
-
+    # x_offset = np.abs(x_round - x_shift) // (1 / factor)
+    # y_offset = np.abs(y_round - y_shift) // (1 / factor)
     star_info = []
     for i in range(len(source.gaia)):
         x_psf = factor * (x_p[left[i]:right[i]] - x_round[i] + half_size) + (x_shift[i] % 1) // (1 / factor)
         y_psf = factor * (y_p[down[i]:up[i]] - y_round[i] + half_size) + (y_shift[i] % 1) // (1 / factor)
         # y_psf = y_p + (y_shift[i] % 1) // (1 / factor)
+        # x_psf = factor * (x_p[left[i]:right[i]] - x_round[i] + half_size) + factor // 2 - 0.5 + x_sign[i] * (
+        #             x_offset[i] + 0.5)
+        # y_psf = factor * (y_p[down[i]:up[i]] - y_round[i] + half_size) + factor // 2 - 0.5 + y_sign[i] * (
+        #             y_offset[i] + 0.5)
         x_psf, y_psf = np.meshgrid(x_psf, y_psf)  # super slow here
         a = np.array(x_psf + y_psf * over_size, dtype=np.int64)
         a = a.flatten()
@@ -166,7 +180,12 @@ def get_psf(source, factor=2):
         star_info.append(
             (np.repeat(index, 4), np.array([a, a + 1, a + over_size, a + over_size + 1]).flatten(order='F'),
              flux_ratio[i] * bilinear(x_residual[i], y_residual[i], repeat=len(a))))
-
+    coord = np.arange(- psf_size * factor / 2 + 1, psf_size * factor / 2 + 2)
+    x_coord, y_coord = np.meshgrid(coord, coord)
+    # dist = (x_coord ** 4 + y_coord ** 4) * 8e-7
+    dist = (x_coord ** 2 + y_coord ** 2) * 5e-5 # 5e-5
+    # # remove center compression
+    # dist[18:27, 18:27] = 0
     remove_index = (np.arange(over_size) + 1) * over_size - 1
     diag = np.diag(np.ones(over_size ** 2))
     A_1 = diag - np.concatenate((np.zeros((over_size ** 2, 1)), diag[:, 0: - 1]), axis=-1)
@@ -175,12 +194,11 @@ def get_psf(source, factor=2):
     A_2 = diag - np.concatenate((np.zeros((over_size ** 2, over_size)), diag[:, 0: - over_size]), axis=-1)
     A_2 = A_2[0: - over_size]
     A_2 = np.concatenate((A_2, (np.zeros((over_size * (over_size - 1), 1)))), axis=-1)
-    # remove_i = np.arange(over_size ** 2).reshape(over_size, over_size)[1:-1, 1:-1]
-    # A_3 = np.delete(diag, remove_i.flatten(), 0)
-    # A_3 = np.concatenate((A_3, (np.zeros((np.shape(A_3)[0], 1)))), axis=-1)
+    A_3 = np.diag(dist.flatten())
+    A_3 = np.concatenate((A_3, (np.zeros((over_size ** 2, 1)))), axis=-1)
     A = np.append(A, A_1, axis=0)
     A = np.append(A, A_2, axis=0)
-    # A = np.append(A, A_3, axis=0)
+    A = np.append(A, A_3, axis=0)
     return A, star_info, over_size, x_round, y_round
 
 
@@ -191,13 +209,13 @@ def reduced_A(A, star_info, star_num=0):
     return A - A_
 
 
-def fit_psf(A, over_size, time=0, regularization=8e2):
+def fit_psf(A, source, over_size, time=0, regularization=8e2):
     b = source.flux[time].flatten()
     b = np.append(b, np.zeros(2 * over_size * (over_size - 1)))
-    # b = np.append(b, np.zeros(4 * (over_size - 1)))
+    b = np.append(b, np.zeros(over_size ** 2))
     scaler = np.sqrt(source.flux_err[0].flatten() ** 2 + source.flux[time].flatten())
     scaler = np.append(scaler, regularization * np.ones(2 * over_size * (over_size - 1)))
-    # scaler = np.append(scaler, 0.1 * np.ones((4 * (over_size - 1))))
+    scaler = np.append(scaler, np.ones(over_size ** 2))
     fit = np.linalg.lstsq(A / scaler[:, np.newaxis], b / scaler, rcond=None)[0]
     fluxfit = np.dot(A, fit)
     return fit, fluxfit
@@ -208,58 +226,40 @@ if __name__ == '__main__':
     with open('/mnt/c/Users/tehan/Documents/GitHub/Searching-Eclipsing-Binaries-in-TESS/source_NGC_7654_90.pkl',
               'rb') as input:
         source = pickle.load(input)
-    factor = 3
-
+    factor = 4
     A, star_info, over_size, x_round, y_round = get_psf(source, factor=factor)
-    fit, fluxfit = fit_psf(A, over_size, time=0, regularization=4e2)
+    fit, fluxfit = fit_psf(A, source, over_size, time=0, regularization=4e2) # 4e2
     plt.imshow(fit[0:-1].reshape(11 * factor + 1, 11 * factor + 1), origin='lower')
     # plt.savefig('/mnt/c/users/tehan/desktop/epsf_grid.png', dpi=300)
     plt.show()
-    epsf = np.load('/mnt/c/users/tehan/desktop/epsf.npy')
+    epsf = np.load('/mnt/c/users/tehan/desktop/epsf_.npy')
 
     # epsf = np.zeros((len(source.time), (11 * factor + 1) ** 2 + 1))
     # for i in range(len(source.time)):
-    #     fit, fluxfit = fit_psf(A, over_size, time=i)
+    #     fit, fluxfit = fit_psf(A, source, over_size, time=i)
     #     epsf[i] = fit
+    #     print(i)
     # np.save('/mnt/c/users/tehan/desktop/epsf_.npy', epsf)
 
-    # get lightcurve for a star
-    # A, star_info, over_size, x_round, y_round = get_psf(source, factor=factor)
+    # lightcurve = np.zeros((5000, len(source.time)))
+    # for i in range(0, 5000):
+    #     i = i + 15000
+    #     r_A = reduced_A(A, star_info, star_num=i)
+    #     x_shift = x_round[i]
+    #     y_shift = y_round[i]
+    #     if 0 <= x_shift <= 89 and 0 <= y_shift <= 89:
+    #         print(i)
+    #         for j in range(len(source.time)):
+    #             lightcurve[i - 15000, j] = source.flux[j][y_shift, x_shift] - \
+    #                                np.dot(r_A, epsf[j])[0:source.size ** 2].reshape(source.size, source.size)[
+    #                                    y_shift, x_shift]
+    # np.save('/mnt/c/users/tehan/desktop/epsf_lc_15000_20000.npy', lightcurve)
 
-    lightcurve = np.zeros((10000, len(source.time)))
-    for i in range(10000):
-        r_A = reduced_A(A, star_info, star_num=i)
-        x_shift = x_round[i]
-        y_shift = y_round[i]
-        if 0 <= x_shift <= 89 and 0 <= y_shift <= 89:
-            print(i)
-            for j in range(len(source.time)):
-                lightcurve[i, j] = source.flux[j][y_shift, x_shift] - \
-                                   np.dot(r_A, epsf[j])[0:source.size ** 2].reshape(source.size, source.size)[y_shift, x_shift]
     # plt.plot(lightcurve[i])
     # plt.plot(source.flux[:, y_shift, x_shift] - epsf[:, -1])
     # plt.show()
-    #
-    # fig, ax = plt.subplots(1, 3, figsize=(18, 5))
-    # plot0 = ax[0].imshow(np.log10(source.flux[0]),
-    #                      vmin=np.min(np.log10(source.flux[0])),
-    #                      vmax=np.max(np.log10(source.flux[0])),
-    #                      origin='lower')
-    # plot1 = ax[1].imshow(np.log10(np.dot(r_A, epsf[j])[0:source.size ** 2].reshape(source.size, source.size)),
-    #                      vmin=np.min(np.log10(source.flux[0])),
-    #                      vmax=np.max(np.log10(source.flux[0])),
-    #                      origin='lower')
-    # residual = (source.flux[0] - np.dot(r_A, epsf[j])[0:source.size ** 2].reshape(source.size, source.size))
-    # plot2 = ax[2].imshow(residual, origin='lower', vmin=- np.max(residual), vmax=np.max(residual), cmap='RdBu')
-    # ax[0].set_title('Raw Data')
-    # ax[1].set_title('ePSF Model')
-    # ax[2].set_title('Residual')
-    # fig.colorbar(plot0, ax=ax[0])
-    # fig.colorbar(plot1, ax=ax[1])
-    # fig.colorbar(plot2, ax=ax[2])
-    # plt.show()
+    # 6476
 
-    np.save('/mnt/c/users/tehan/desktop/epsf_all_lc.npy', lightcurve)
 
     fig, ax = plt.subplots(1, 3, figsize=(18, 5))
     plot0 = ax[0].imshow(np.log10(source.flux[0]),
@@ -278,10 +278,31 @@ if __name__ == '__main__':
     fig.colorbar(plot0, ax=ax[0])
     fig.colorbar(plot1, ax=ax[1])
     fig.colorbar(plot2, ax=ax[2])
-    # plt.savefig('/mnt/c/users/tehan/desktop/epsf_residual.png', dpi=300)
+    plt.savefig('/mnt/c/users/tehan/desktop/epsf_residual.png', dpi=300)
     plt.show()
     # plt.imshow(fit[0:-1].reshape(11 * factor + 1, 11 * factor + 1), origin='lower')
     # plt.show()
+
+
+# fig, ax = plt.subplots(1, 3, figsize=(18, 5))
+    # plot0 = ax[0].imshow(np.log10(source.flux[0]),
+    #                      vmin=np.min(np.log10(source.flux[0])),
+    #                      vmax=np.max(np.log10(source.flux[0])),
+    #                      origin='lower')
+    # plot1 = ax[1].imshow(np.log10(np.dot(r_A, epsf[j])[0:source.size ** 2].reshape(source.size, source.size)),
+    #                      vmin=np.min(np.log10(source.flux[0])),
+    #                      vmax=np.max(np.log10(source.flux[0])),
+    #                      origin='lower')
+    # residual = (source.flux[0] - np.dot(r_A, epsf[j])[0:source.size ** 2].reshape(source.size, source.size))
+    # plot2 = ax[2].imshow(residual, origin='lower', vmin=- np.max(residual), vmax=np.max(residual), cmap='RdBu')
+    # ax[0].set_title('Raw Data')
+    # ax[1].set_title('ePSF Model')
+    # ax[2].set_title('Residual')
+    # fig.colorbar(plot0, ax=ax[0])
+    # fig.colorbar(plot1, ax=ax[1])
+    # fig.colorbar(plot2, ax=ax[2])
+    # plt.show()
+
 
 # fit, fluxfit, x_round, y_round = get_psf(source, factor=factor, position=0)
 # left = np.maximum(0, x_round - 2)

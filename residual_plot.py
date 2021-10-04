@@ -21,7 +21,7 @@ if __name__ == '__main__':
                          vmax=np.max(np.log10(source.flux[0])), origin='lower')
     plot2 = ax[2].imshow(result[-1], origin='lower', vmin=- np.max(result[-1]), vmax=np.max(result[-1]), cmap='RdBu')
     ax[0].set_title('Raw Data')
-    ax[1].set_title('ePSF Model')
+    ax[1].set_title('Moffat Model')
     ax[2].set_title('Residual')
     fig.colorbar(plot0, ax=ax[0])
     fig.colorbar(plot1, ax=ax[1])

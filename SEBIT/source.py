@@ -199,4 +199,5 @@ class Source(object):
 
 
 if __name__ == '__main__':
-    target = Source('NGC 7654')
+    # target = Source('NGC 7654')
+    source = Source('351.1378304925981 61.311247660185245', size=3, sector=24)

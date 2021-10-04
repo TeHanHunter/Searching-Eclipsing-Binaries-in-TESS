@@ -1,7 +1,15 @@
 README.md
 Searching_EB-Command_line.py
 Searching_EB-Multiple_sectors.py
+residual_plot.py
+result.pkl
 setup.py
+source.pkl
+source_90,0_.pkl
+source_NGC_7654.pkl
+source_NGC_7654_50.pkl
+source_NGC_7654_90.pkl
+tess_cnn.h5
 tess_cnn_sparse.h5
 tess_cnn_strict.h5
 .idea/.gitignore
@@ -15,8 +23,14 @@ CNN Training/mass_r_teff.dat
 CNN Training/tess_cnn.h5
 CNN Training/tess_cnn_weights.h5
 SEBIT/__init__.py
+SEBIT/chi_sqaure_test.py
 SEBIT/cnn.py
+SEBIT/cross_match.py
+SEBIT/distortion.py
+SEBIT/ePSF.py
+SEBIT/lc_plot.py
 SEBIT/main.py
+SEBIT/moffat.py
 SEBIT/psf.py
 SEBIT/source.py
 SEBIT/test.py

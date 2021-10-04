@@ -159,7 +159,13 @@ if __name__ == '__main__':
     with open('/mnt/c/Users/tehan/Documents/GitHub/Searching-Eclipsing-Binaries-in-TESS/source_NGC_7654_90.pkl',
               'rb') as input:
         source = pickle.load(input)
-    lightcurve = np.load('/mnt/c/users/tehan/desktop/epsf_all_lc.npy')
+    lightcurve_1 = np.load('/mnt/c/users/tehan/desktop/epsf_lc_0_5000.npy')
+    lightcurve_2 = np.load('/mnt/c/users/tehan/desktop/epsf_lc_5000_10000.npy')
+    lightcurve_3 = np.load('/mnt/c/users/tehan/desktop/epsf_lc_10000_15000.npy')
+    lightcurve_4 = np.load('/mnt/c/users/tehan/desktop/epsf_lc_15000_20000.npy')
+    lightcurve = np.append(lightcurve_1, lightcurve_2, axis=0)
+    lightcurve = np.append(lightcurve, lightcurve_3, axis=0)
+    lightcurve = np.append(lightcurve, lightcurve_4, axis=0)
     Sample_number = 500
     tensorflow.get_logger().setLevel('ERROR')  ## ignore internal TensorFlow Warning message
     cnn = make_cnn(Sample_number)
@@ -185,21 +191,25 @@ if __name__ == '__main__':
     #         in_frame.append(i)
     in_frame = np.where(np.min(lightcurve, axis=1) > 0)[0]
 
-    # with Pool(10) as p:
-    #     r = list(tqdm(p.imap(multi_cnn, in_frame),
-    #                   total=len(in_frame)))
-    #
-    #     np.save('/mnt/c/users/tehan/desktop/cnn_result', r)
-    r = np.load('/mnt/c/users/tehan/desktop/cnn_result.npy', allow_pickle=True)
+    # with Pool() as p:
+    #     r = list(tqdm(p.imap(multi_cnn, in_frame), total=len(in_frame)))
+    # np.save('/mnt/c/users/tehan/desktop/cnn_result_new', r)
+    # r = np.load('/mnt/c/users/tehan/desktop/cnn_result_new.npy', allow_pickle=True)
+    # result = []
+    # for i in range(len(in_frame)):
+    #     result.append(cnn_prediction(source, lightcurve, star_num=in_frame[i], Sample_number=500, mod_p=mod_p,
+    #                                  mod_periods=mod_periods))
+    #     print(str(i) + ' / ' + str(len(in_frame)))
+    # np.save('/mnt/c/users/tehan/desktop/cnn_result_new', result)
 
-    for i, index in enumerate(in_frame):
-        if r[i] is not None and r[i][-1] > 0.95:
-            plt.plot(source.time, lightcurve[index])
-            plt.title(r[i][0])
-            plt.show()
+    # for i, index in enumerate(in_frame):
+    #     if r[i] is not None and r[i][-1] > 0.95:
+    #         plt.plot(source.time, lightcurve[index])
+    #         plt.title(r[i][0])
+    #         plt.show()
 
-    # x = source.gaia['Sector_17_x']
-    # y = source.gaia['Sector_17_y']
+    x = source.gaia['Sector_17_x']
+    y = source.gaia['Sector_17_y']
     # dis = np.sqrt(
     #     (np.array(x) - source.gaia['Sector_17_x'][77]) ** 2 + (np.array(y) - source.gaia['Sector_17_y'][77]) ** 2)
     # arg = np.argsort(dis)
@@ -207,20 +217,22 @@ if __name__ == '__main__':
     #     plt.plot(lightcurve[arg[np.where(arg < 1000)][i]])
     #     plt.show()
 
-    # r = np.load('/mnt/c/users/tehan/desktop/cnn_result.npy', allow_pickle=True)
-    # eb = []
-    # per = []
-    # for i, index in enumerate(in_frame):
-    #     if r[i] is not None and r[i][-1] > 0.999:
-    #         per.append(r[i][0])
-    #         eb.append(index)
-    # x = source.gaia['Sector_17_x']
-    # y = source.gaia['Sector_17_y']
-    # plt.imshow(np.log10(source.flux[0]), vmin=np.min(np.log10(source.flux[0])),
-    #            vmax=np.max(np.log10(source.flux[0])), origin='lower', cmap='gray')
-    # plt.scatter(x[eb], y[eb], s=3, c=per, cmap='tab20')
-    # plt.title('Periods predictions')
-    # cbar = plt.colorbar()
-    # cbar.labelbad = 55
-    # cbar.set_label('Periods (days)', rotation=270, labelpad=15)
-    # plt.show()
+    r = np.load('/mnt/c/users/tehan/desktop/cnn_result_new.npy', allow_pickle=True)
+    eb = []
+    per = []
+    for i, index in enumerate(in_frame):
+        if r[i] is not None and r[i][-1] > 0.999:
+            per.append(r[i][0])
+            eb.append(index)
+    # a = np.stack((np.array(eb), np.array(per), np.array(x)[eb], np.array(y)[eb]))
+    # np.savetxt('/mnt/c/users/tehan/desktop/eb_candidate_new.csv', a.T[np.argsort(a[1])], delimiter=",")
+
+    plt.imshow(np.log10(source.flux[0]), vmin=np.min(np.log10(source.flux[0])),
+               vmax=np.max(np.log10(source.flux[0])), origin='lower', cmap='gray')
+    plt.scatter(x[eb], y[eb], s=3, c=per, cmap='tab20')
+    plt.title('Periods predictions')
+    cbar = plt.colorbar()
+    cbar.labelbad = 55
+    cbar.set_label('Periods (days)', rotation=270, labelpad=15)
+    # plt.savefig('/mnt/c/users/tehan/desktop/per.png', dpi=300)
+    plt.show()
