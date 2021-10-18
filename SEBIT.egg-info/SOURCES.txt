@@ -28,6 +28,7 @@ SEBIT/cnn.py
 SEBIT/cross_match.py
 SEBIT/distortion.py
 SEBIT/ePSF.py
+SEBIT/eb_plot.py
 SEBIT/lc_plot.py
 SEBIT/main.py
 SEBIT/moffat.py
