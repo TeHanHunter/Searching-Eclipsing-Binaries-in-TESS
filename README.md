@@ -26,7 +26,7 @@ tensorflow, astroquery
 ```
 
 ### Installing
-After installing required packages, clone the master folder and run Searching_EB-Command_line.py on a command line. Locate tess_cnn.h5 file in CNN Training folder and you can start using it!
+After installing required packages, clone the master folder and run Searching_EB-Command_line.py on a command line. Run `pip3 install -e`. Locate tess_cnn.h5 file in CNN Training folder and you can start using it!
 
 ## Running the Search
 The script askes for several parameters and saves figures and data that are selected by these parameters. This run on a region of NGC 7654 takes less than 2 mins for 125 pixels. 
