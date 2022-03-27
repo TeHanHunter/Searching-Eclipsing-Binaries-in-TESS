@@ -67,11 +67,11 @@ class Source(object):
         coord = SkyCoord(ra, dec, unit="deg")
         hdulist = Tesscut.get_cutouts(coord, self.size)
         sector_table = Tesscut.get_sectors(coord)
+        self.sector_table = sector_table
         if sector is None:
             self.sector = sector_table['sector'][0]
             hdu = hdulist[0]
         else:
-            # TODO: test sector number
             self.sector = sector
             hdu = hdulist[list(sector_table['sector']).index(sector)]
         wcs = WCS(hdu[2].header)

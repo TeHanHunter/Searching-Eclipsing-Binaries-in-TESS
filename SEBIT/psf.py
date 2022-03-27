@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import optimize
+import matplotlib.pyplot as plt
 
 
 class Linmodel:
@@ -152,13 +153,9 @@ def psf(source, num=0, c=None, aperture=False, mesh=None):
     mesh:
     """
     if num == -1:
-        flux = np.mean(source.flux, axis=0)
-    elif source.gaia_cut is None:
-        flux = source.flux[num]
-    elif num == -2:
-        flux = np.mean(source.flux_cut, axis=0)
+        flux = np.median(source.flux, axis=0)
     else:
-        flux = source.flux_cut[num]
+        flux = source.flux[num]
     flux_flat = flux.reshape(mesh.size ** 2)
     if c is None:
         cfit = optimize.minimize(chisq_model, source.cguess, (moffat_model, flux_flat, source, mesh),
@@ -176,7 +173,18 @@ def psf(source, num=0, c=None, aperture=False, mesh=None):
     if aperture is True:
         flux_cube = c_result.flux_cube
         contamination = c_result.par[0] * np.ones((mesh.size, mesh.size)) + c_result.par[1] * np.sum(
-            (flux_cube * mesh.flux_ratio)[np.array(list(set(np.arange(source.nstars)) ^ set(source.star_index)))], axis=0)
+            (flux_cube * mesh.flux_ratio)[np.array(list(set(np.arange(source.nstars)) ^ set(source.star_index)))],
+            axis=0)
         aperture = flux - contamination
         r.append(aperture)
     return r
+
+
+def plot_moffat(c_result, density=101): # odd density
+    x = np.linspace(-5, 5, density)
+    x_, y_ = np.meshgrid(x, x)
+    flux_cube = (1 + (c_result[3] * x_ ** 2 + 2 * c_result[4] * x_ * y_ + c_result[5] * y_ ** 2)) ** (- c_result[6])
+    plt.imshow(flux_cube)
+    plt.plot(np.where(x == 0.), np.where(x == 0.), '.r', ms=10)
+    plt.show()
+
